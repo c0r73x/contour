@@ -2457,6 +2457,13 @@ class SessionHost final: public vtworkspace::ModelEvents
     [[nodiscard]] std::optional<vtpty::PageSize> refinedSize(PaneRefinements const& refinements) const;
     /// @return Whether any attached client reported the resolved `_pageSize` as its area.
     [[nodiscard]] bool anyClientDisplaysPageSize() const;
+
+    /// The area @p workspace's panes are projected into: the clients showing it, resolved under the size
+    /// policy; `_pageSize` when no client shows it. Per workspace, so a window opening or resizing never
+    /// reflows the panes another window shows.
+    [[nodiscard]] vtpty::PageSize areaOfWorkspace(uint64_t workspace) const;
+    /// areaOfWorkspace() for the workspace holding @p tab.
+    [[nodiscard]] vtpty::PageSize areaOfTab(vtworkspace::Tab const& tab) const;
     /// @param client A reporting client.
     /// @return Whether @p client displays the resolved area (`_pageSize`): only such a client measured its
     ///         panes, and sized its cells, for the grid the terminals hold.

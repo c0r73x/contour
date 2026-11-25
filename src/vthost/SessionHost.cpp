@@ -1708,7 +1708,9 @@ SizeChange SessionHost::applyClientSize(SessionStreamEvents* client,
         // this report, would move it straight back -- two resizes for none.
         if (areaMoved && resolved == SizeChange::Applied)
             forgetClientRefinements(client);
-        auto const change = settlePicks(resolved, before);
+        // Per-workspace areas: a client's own area moving re-projects its workspace even when the host-wide
+        // resolution stayed put.
+        auto const change = settlePicks(areaMoved ? SizeChange::Applied : resolved, before);
         if (areaMoved)
             forgetClientRefinements(client);
         return change;
@@ -1735,13 +1737,28 @@ std::optional<vtpty::PageSize> SessionHost::refinedSize(PaneRefinements const& r
 bool SessionHost::displaysResolvedArea(SessionStreamEvents* client) const
 {
     auto const area = _clientAreas.find(client);
-    return area != _clientAreas.end() && area->second.size == _pageSize;
+    return area != _clientAreas.end() && area->second.size == areaOfWorkspace(client->selectedWorkspace());
 }
 
 bool SessionHost::anyClientDisplaysPageSize() const
 {
-    return std::ranges::any_of(_clientAreas | std::views::values,
-                               [this](ClientArea const& area) { return area.size == _pageSize; });
+    return std::ranges::any_of(_clientAreas, [this](auto const& entry) {
+        return entry.second.size == areaOfWorkspace(entry.first->selectedWorkspace());
+    });
+}
+
+vtpty::PageSize SessionHost::areaOfWorkspace(uint64_t workspace) const
+{
+    auto const showing = [workspace](auto const& entry) {
+        return entry.first->selectedWorkspace() == workspace;
+    };
+    return resolveClientArea(_sizePolicy, _clientAreas | std::views::filter(showing) | std::views::values)
+        .value_or(_pageSize);
+}
+
+vtpty::PageSize SessionHost::areaOfTab(vtworkspace::Tab const& tab) const
+{
+    return areaOfWorkspace(_model.workspaceOfTab(tab.id()).value);
 }
 
 std::optional<vtpty::PageSize> SessionHost::pickOf(SessionId session) const
@@ -1759,9 +1776,10 @@ std::optional<vtpty::PageSize> SessionHost::projectedSize(SessionId session) con
     auto const* leaf = std::get<vtworkspace::Pane*>(found);
     if (tab == nullptr || leaf == nullptr)
         return std::nullopt;
+    auto const area = areaOfTab(*tab);
     if (tab->layoutRoot() != tab->rootPane() && tab->layoutRoot() == leaf)
-        return _pageSize; // zoomed: the whole area (@see reprojectTab)
-    for (auto const& rect: vtworkspace::layoutInCells(*tab->rootPane(), _pageSize))
+        return area; // zoomed: the whole area (@see reprojectTab)
+    for (auto const& rect: vtworkspace::layoutInCells(*tab->rootPane(), area))
         if (rect.pane == leaf->id())
             return cellSize(rect);
     return std::nullopt;
@@ -1983,7 +2001,8 @@ SizeChange SessionHost::reprojectTab(vtworkspace::Tab const& tab)
     // A zoomed leaf fills the whole area (tmux's zoom model: the saved layout keeps the rest), so it is
     // sized once, after the underlying layout's other leaves.
     auto const* zoomed = tab.layoutRoot() != tab.rootPane() ? tab.layoutRoot() : nullptr;
-    for (auto const& rect: vtworkspace::layoutInCells(*tab.rootPane(), _pageSize))
+    auto const area = areaOfTab(tab);
+    for (auto const& rect: vtworkspace::layoutInCells(*tab.rootPane(), area))
     {
         auto const* leaf = tab.rootPane()->findPane(rect.pane);
         if (leaf == nullptr || leaf == zoomed)
@@ -1996,7 +2015,7 @@ SizeChange SessionHost::reprojectTab(vtworkspace::Tab const& tab)
     }
     if (zoomed != nullptr)
         if (auto* backing = terminal(zoomed->session()))
-            moved |= resizeLocked(zoomed->session(), *backing, pickOf(zoomed->session()).value_or(_pageSize))
+            moved |= resizeLocked(zoomed->session(), *backing, pickOf(zoomed->session()).value_or(area))
                      == SizeChange::Applied;
     return moved ? SizeChange::Applied : SizeChange::Unchanged;
 }
