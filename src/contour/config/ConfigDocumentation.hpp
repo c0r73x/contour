@@ -3183,6 +3183,24 @@ constexpr StringLiteral SecureInputWeb {
     "\n"
 };
 
+constexpr StringLiteral BareWindowConfig {
+    "{comment} Whether a window without a tab strip draws no chrome at all: no title band, no\n"
+    "{comment} workspace chip, no window controls (on macOS the traffic lights are hidden too).\n"
+    "{comment} Applies while the native title bar is hidden (show_title_bar: false) and the tab\n"
+    "{comment} strip is not shown. Meant for tiling window managers.\n"
+    "bare_window: {}\n"
+    "\n"
+};
+
+constexpr StringLiteral BareWindowWeb {
+    "\n"
+    "flag, when `true`, a window whose tab strip is not shown draws no chrome at all: no title band, no "
+    "workspace chip and no window controls. On macOS the system's own traffic lights are hidden as well, "
+    "so the terminal content fills the whole window. Applies only while "
+    "[`show_title_bar`](profiles.md#show_title_bar) is `false`. Meant for tiling window managers, where "
+    "windows are moved and closed from the keyboard. The default value is `false`.\n"
+};
+
 constexpr StringLiteral WindowControlStyleWeb {
     "\n"
     "Selects how the window's own minimize/maximize/close controls are drawn, and which side of the tab "
@@ -4432,6 +4450,10 @@ struct Text<SecureInput>: DocumentationEntry<SecureInputConfig, SecureInputWeb>
 };
 template <>
 struct Text<WindowControlStyle>: DocumentationEntry<WindowControlStyleConfig, WindowControlStyleWeb>
+{
+};
+template <>
+struct Text<BareWindow>: DocumentationEntry<BareWindowConfig, BareWindowWeb>
 {
 };
 template <>

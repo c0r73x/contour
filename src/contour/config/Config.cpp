@@ -1977,6 +1977,7 @@ void YAMLConfigReader::load(Config& c)
         loadFromEntry("theme", c.theme);
         loadFromEntry("ui_style", c.uiStyle);
         loadFromEntry("window_control_style", c.windowControlStyle);
+        loadFromEntry("bare_window", c.bareWindow);
         loadFromEntry("chrome_density", c.chromeDensity);
         loadFromEntry("secure_input", c.secureInput);
         loadFromEntry("ui_font_family", c.uiFontFamily);

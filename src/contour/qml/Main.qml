@@ -122,7 +122,10 @@ ThemedWindow
     // WindowFrame { ClientBand, NativeFrame }, WindowMode { Windowed, FullScreen }, TabStripGate { Hidden,
     // Shown }, TabBarPosition { Top, Bottom }, HostChipState, TabPlacement { Top, Sidebar } and
     // SidebarVisibility { Hidden, Shown }. Main.qml is the only caller.
-    readonly property var band: chromeStyle.titleBand(appWindow.bandFrame,
+    // bare_window with no tab strip: no band, so no title, chip or sidebar toggle (WindowController::titleBand).
+    readonly property var band: appWindow.win && appWindow.win.bareWindow && !appWindow.tabBarShouldShow
+                                ? ({ band: "hidden", bandEdge: "top", centre: "empty", tabBar: "hidden" })
+                                : chromeStyle.titleBand(appWindow.bandFrame,
                                                       appWindow.bandMode,
                                                       appWindow.tabBarShouldShow ? 1 : 0,
                                                       appWindow.tabBarPosition,

@@ -53,6 +53,7 @@ struct UiStyle {};
 struct ChromeDensity {};
 struct SecureInput {};
 struct WindowControlStyle {};
+struct BareWindow {};
 struct UiFontFamily {};
 struct UiFontSize {};
 struct Margins {};

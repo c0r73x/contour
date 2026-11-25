@@ -1311,6 +1311,10 @@ struct Config
     ConfigEntry<WindowControlStyle, documentation::WindowControlStyle> windowControlStyle {
         WindowControlStyle::Auto
     };
+    // Application-wide like windowControlStyle: whether a window without a tab strip draws no chrome at all
+    // -- no title band, no window controls (macOS hides its traffic lights too). Meant for tiling window
+    // managers, where the window is placed and closed from the keyboard.
+    ConfigEntry<bool, documentation::BareWindow> bareWindow { false };
     // Application-wide like windowControlStyle: a window has one chrome, so the density cannot be a
     // per-profile answer. Comfortable in both editions, so a column keeps a third edition a row.
     ConfigEntry<ChromeDensity, documentation::ChromeDensity> chromeDensity {

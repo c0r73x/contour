@@ -44,10 +44,18 @@ class CocoaWindowFrame final: public NativeWindowFrame
         if (nsWindow == nil)
             return;
 
+        auto const policy = framePolicyFor(FramePlatform::MacOS, decoration);
+
+        // bare_window: no traffic lights over the full-size content view. Applied on every call, ahead of
+        // the cached-decoration early return, so toggling the setting alone takes effect -- and again after
+        // Qt rewrites the style mask, which may rebuild the buttons.
+        auto const bare = policy.shadow == FrameShadowStrategy::FullSizeContent
+                          && window.property(BareWindowKey).toBool();
+        for (NSWindowButton const kind: { NSWindowCloseButton, NSWindowMiniaturizeButton, NSWindowZoomButton })
+            [[nsWindow standardWindowButton:kind] setHidden:bare ? YES : NO];
+
         if (!needsFrameApplied(window, decoration))
             return;
-
-        auto const policy = framePolicyFor(FramePlatform::MacOS, decoration);
         // The full-size content view is not ours to set or clear: Qt::ExpandedClientAreaHint owns it
         // (ClientAreaExpansion::QtHint, through Main.qml's `flags`), and Qt rewrites the style mask on
         // its own -- entering and leaving full screen among others -- so a second owner here would lose.
@@ -92,6 +100,10 @@ class CocoaWindowFrame final: public NativeWindowFrame
     {
         NSWindow* nsWindow = nsWindowOf(window);
         if (nsWindow == nil)
+            return 0.0;
+
+        // bare_window hides the buttons: no room to keep clear for them.
+        if (window.property(BareWindowKey).toBool())
             return 0.0;
 
         NSButton* close = [nsWindow standardWindowButton:NSWindowCloseButton];
