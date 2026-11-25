@@ -732,6 +732,16 @@ namespace
                        return std::format(
                            "workspace={} {}", value.workspace, formatWorkspaceColor(value.color));
                    } },
+        TraceRow { PduType::SessionFont,
+                   "SessionFont",
+                   +[](DecodedPdu const& pdu) {
+                       auto const& value = std::get<SessionFont>(pdu);
+                       return std::format("session={} size={} regular={} reset={}",
+                                          value.session,
+                                          value.sizeCenti,
+                                          value.regular,
+                                          value.reset);
+                   } },
     };
 
     static_assert(TraceTable.size() == std::variant_size_v<DecodedPdu>,

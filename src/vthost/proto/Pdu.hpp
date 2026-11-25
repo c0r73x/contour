@@ -106,6 +106,7 @@ enum class PduType : uint8_t
     Goodbye = 60,
     OpenFirstTab = 61,
     SetWorkspaceColor = 62,
+    SessionFont = 63,
 };
 
 static_assert(std::to_underlying(PduType::ClientHello) == 1 && std::to_underlying(PduType::ServerHello) == 2,
@@ -1109,6 +1110,21 @@ struct SessionClipboard
     bool operator==(SessionClipboard const&) const = default;
 };
 
+/// A session asked for other fonts (OSC 50 / OSC 60), forwarded like SessionClipboard: the CLIENT applies
+/// its own change_font permission, since it is the one that draws.
+struct SessionFont
+{
+    uint64_t session = 0;
+    uint64_t sizeCenti = 0;     ///< Point size * 100; 0 keeps the size.
+    std::string regular = {};   ///< Empty keeps the font; likewise below.
+    std::string bold = {};
+    std::string italic = {};
+    std::string boldItalic = {};
+    std::string emoji = {};
+    bool reset = false;         ///< Back to the profile's fonts; the fields above are ignored.
+    bool operator==(SessionFont const&) const = default;
+};
+
 /// One OSC 7501 program-status record on the wire. The enums travel as their bytes; a reader that does
 /// not know a state drops the record (vthost::control::fromWire), one that does not know a kind reads none.
 struct WireProgramStatusRecord
@@ -1219,7 +1235,7 @@ struct SoftFontState
 /// as a type-safe alternative set: what a consumer handling "a session did something" dispatches over,
 /// without enumerating the catalog's tags itself.
 using SessionEventPdu = std::
-    variant<SessionBell, SessionNotify, SessionClipboard, ProgramStatus, SessionInputEcho, SoftFontState>;
+    variant<SessionBell, SessionNotify, SessionClipboard, ProgramStatus, SessionInputEcho, SoftFontState, SessionFont>;
 
 /// One node of a tab's split tree on the wire (pre-order): a leaf carries a
 /// session and no children; a split carries a ratio and exactly two children.
@@ -2071,7 +2087,8 @@ using DecodedPdu = std::variant<Invalid,
                                 CloseWorkspace,
                                 Goodbye,
                                 OpenFirstTab,
-                                SetWorkspaceColor>;
+                                SetWorkspaceColor,
+                                SessionFont>;
 
 /// Encodes @p pdu (body + frame) into @p sink.
 /// @param sink The output writer.
