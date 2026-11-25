@@ -2708,6 +2708,33 @@ void YAMLConfigReader::loadFromEntry(YAML::Node const& node,
         for (unsigned i = 0; i < 8; ++i)
             colors[256 + i] = colors[i] * 0.5f;
     }
+
+    // Any of the 256 indexed colors by number (`232: '#141115'`), the way Alacritty's
+    // `colors.indexed_colors` sets 16-255. Last, so an entry for 0-15 overrides the named maps.
+    logger()("*** loading indexed colors");
+    readGuarded(node, "indexed", colors, [&]() {
+        auto const indexed = node["indexed"];
+        if (!indexed || !indexed.IsMap())
+            return;
+        for (auto const& entry: indexed)
+        {
+            auto const index = entry.first.as<unsigned>();
+            if (index > 255)
+            {
+                errorLog()("Color scheme: indexed color {} is out of range (0-255); ignoring it.", index);
+                continue;
+            }
+            auto const value = entry.second.as<std::string>();
+            if (!value.empty() && value[0] == '#')
+                colors[index] = value;
+            else if (value.size() > 2 && value[0] == '0' && value[1] == 'x')
+                colors[index] = vtbackend::RGBColor { entry.second.as<uint32_t>() };
+            else
+                errorLog()("Color scheme: indexed color {} '{}' is not '#rrggbb' or 0xrrggbb; ignoring it.",
+                           index,
+                           value);
+        }
+    });
     logger()("*** color palette is loaded");
 }
 

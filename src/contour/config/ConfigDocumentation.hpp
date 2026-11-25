@@ -2415,6 +2415,12 @@ constexpr StringLiteral DimColorsConfig {
     "{comment}     magenta: {}\n"
     "{comment}     cyan:    {}\n"
     "{comment}     white:   {}\n"
+    "\n"
+    "{comment} Any of the 256 indexed colors by number, 16-255 included (the 6x6x6 cube and the\n"
+    "{comment} grayscale ramp). Applied last, so it also overrides normal/bright for 0-15.\n"
+    "{comment} indexed:\n"
+    "{comment}     232: '#141115'\n"
+    "{comment}     255: '#c8cfd8'\n"
 };
 
 constexpr StringLiteral BoxArcStyleConfig {
