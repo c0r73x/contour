@@ -73,6 +73,10 @@ struct HintModeRequest
     /// How many scrollback rows to scan at most under HintScope::Scrollback; ignored otherwise.
     /// Zero — the default, matching the default scope — scans no history at all.
     LineCount scrollbackLimit { 0 };
+
+    /// The characters labels are built from, in order of preference. Empty selects
+    /// @ref DefaultHintAlphabet; see @ref normalizeHintAlphabet for what is kept.
+    std::string alphabet {};
 };
 
 /// A single match found during hint scanning, with its label and grid positions.
@@ -136,7 +140,11 @@ class HintModeHandler
     /// @param patterns The patterns to scan with; taken by value and moved into the handler,
     ///                 so a caller with a throwaway set should std::move it in.
     /// @param action   The action to perform on selection.
-    void activate(HintScanArea const& area, HintPatternSet patterns, HintAction action);
+    /// @param alphabet The characters labels are built from; empty selects @ref DefaultHintAlphabet.
+    void activate(HintScanArea const& area,
+                  HintPatternSet patterns,
+                  HintAction action,
+                  std::string_view alphabet = {});
 
     /// Re-scans @p area using the patterns and action stored by @ref activate.
     /// Called on viewport scroll to update visible-scope hints without re-entering hint mode.
@@ -195,6 +203,7 @@ class HintModeHandler
     Executor& _executor;
     bool _active = false;
     HintAction _action = HintAction::Copy;
+    std::string _alphabet { DefaultHintAlphabet }; ///< Normalized on activate.
     HintPatternSet _patterns; ///< Stored on activate for refresh on scroll.
     std::vector<HintMatch> _allMatches;
     std::vector<HintMatch> _filteredMatches;

@@ -2261,6 +2261,18 @@ void YAMLConfigReader::loadProfileBody(YAML::Node const& child,
                  vtbackend::LinkPatterns::compile(linkPatternSpecs(where)).diagnostics())
                 errorLog()("Profile '{}': {}", profileName, diagnostic.message());
         loadFromEntry(child, "hint_scrollback_lines", where.hintScrollbackLines);
+        loadFromEntry(child, "hint_alphabet", where.hintAlphabet);
+        if (child["hint_alphabet"])
+        {
+            auto const normalized = vtbackend::normalizeHintAlphabet(where.hintAlphabet.value());
+            if (normalized != where.hintAlphabet.value())
+                errorLog()("Profile '{}': hint_alphabet '{}' is used as '{}' (lowercase, printable, "
+                           "each character once, at least two).",
+                           profileName,
+                           where.hintAlphabet.value(),
+                           normalized);
+            where.hintAlphabet = normalized;
+        }
     }
 }
 

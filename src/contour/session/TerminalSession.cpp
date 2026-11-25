@@ -6466,6 +6466,7 @@ bool TerminalSession::operator()(actions::HintMode const& action)
             .action = action.hintAction,
             .scope = action.scope,
             .scrollbackLimit = profile().hintScrollbackLines.value(),
+            .alphabet = profile().hintAlphabet.value(),
         });
     });
     return true;

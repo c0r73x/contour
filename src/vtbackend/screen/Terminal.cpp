@@ -6410,7 +6410,7 @@ void Terminal::activateHintMode(HintModeRequest request)
     auto mutablePatterns = std::move(request.patterns);
     mutablePatterns.resolve = hintResolver(_hintDirectory);
 
-    _hintModeHandler.activate(area, std::move(mutablePatterns), request.action);
+    _hintModeHandler.activate(area, std::move(mutablePatterns), request.action, request.alphabet);
     _inputHandler.setMode(ViMode::Hint);
 }
 

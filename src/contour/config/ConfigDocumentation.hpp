@@ -2206,6 +2206,25 @@ constexpr StringLiteral HintScrollbackLinesWeb {
     ""
 };
 
+constexpr StringLiteral HintAlphabetConfig {
+    "\n"
+    "{comment} The characters HintMode builds its labels from, most preferred first (as Alacritty's\n"
+    "{comment} hints.alphabet). Lowercased; each character counts once; at least two are needed.\n"
+    "hint_alphabet: {}\n"
+};
+
+constexpr StringLiteral HintAlphabetWeb {
+    "The characters `HintMode` builds its labels from, most preferred first. Letters are lowercased, "
+    "each character counts once, and at least two are needed; anything less falls back to `a`-`z`.\n"
+    "\n"
+    "``` yaml\n"
+    "profiles:\n"
+    "  profile_name:\n"
+    "    hint_alphabet: aoeuidhtnsrplygmcfb\n"
+    "```\n"
+    ""
+};
+
 constexpr StringLiteral IndicatorStatusLineConfig {
     "\n"
     "{comment} Defines the colors to be used for the Indicator status line.\n"
@@ -4907,6 +4926,10 @@ struct Text<Extensions>: DocumentationEntry<ExtensionsConfig, ExtensionsWeb, "ex
 };
 template <>
 struct Text<HintScrollbackLines>: DocumentationEntry<HintScrollbackLinesConfig, HintScrollbackLinesWeb>
+{
+};
+template <>
+struct Text<HintAlphabet>: DocumentationEntry<HintAlphabetConfig, HintAlphabetWeb>
 {
 };
 template <>

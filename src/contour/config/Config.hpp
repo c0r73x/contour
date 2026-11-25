@@ -35,6 +35,7 @@
 #include <vtbackend/input/InputBinding.hpp>
 #include <vtbackend/input/InputGenerator.hpp>
 #include <vtbackend/input/MatchModes.hpp>
+#include <vtbackend/input/vi/HintTypes.hpp>
 #include <vtbackend/links/LinkPatterns.hpp>
 #include <vtbackend/screen/GutterSettings.hpp>
 #include <vtbackend/screen/Settings.hpp>
@@ -1174,6 +1175,8 @@ struct TerminalProfile
     ConfigEntry<vtbackend::LineCount, documentation::HintScrollbackLines> hintScrollbackLines {
         vtbackend::LineCount { 1000 }
     };
+    ConfigEntry<std::string, documentation::HintAlphabet> hintAlphabet { std::string {
+        vtbackend::DefaultHintAlphabet } };
 
     ConfigEntry<std::string, documentation::WMClass> wmClass { CONTOUR_APP_ID };
     ConfigEntry<std::string, documentation::TabLabel> tabLabel { "{TabName}" };

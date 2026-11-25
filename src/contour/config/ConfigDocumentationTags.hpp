@@ -142,6 +142,7 @@ struct HintMatch {};
 struct HintPatterns {};
 struct Extensions {};
 struct HintScrollbackLines {};
+struct HintAlphabet {};
 struct IndicatorStatusLine {};
 struct FoldMarker {};
 struct FoldMarkerHeader {};
