@@ -7180,7 +7180,12 @@ bool TerminalSession::operator()(actions::ViNormalMode)
     // which parses and takes this lock again: the report goes out once the lock is released.
     {
         auto const _ = std::scoped_lock { _terminal };
-        if (terminal().inputHandler().mode() == ViMode::Insert)
+        // Hint mode takes Escape to cancel, but a binding of Escape to this action outside Insert mode
+        // (`mode: '~Insert'`) matches there too and would swallow it: leaving vi's modes means leaving
+        // hint mode, back to the mode it was entered from.
+        if (terminal().isHintModeActive())
+            terminal().hintModeHandler().deactivate();
+        else if (terminal().inputHandler().mode() == ViMode::Insert)
             terminal().inputHandler().setMode(ViMode::Normal);
         else if (terminal().inputHandler().mode() == ViMode::Normal)
             terminal().inputHandler().setMode(ViMode::Insert);

@@ -2613,6 +2613,27 @@ TEST_CASE("TerminalSession: a status line type a reload changes during vi mode o
     CHECK(terminal.statusDisplayType() == vtbackend::StatusDisplayType::None);
 }
 
+TEST_CASE("TerminalSession: ViNormalMode cancels hint mode back to the mode it was entered from",
+          "[contour][session][hint]")
+{
+    // A config binding Escape to ViNormalMode outside Insert mode matches in hint mode too, so the action
+    // has to do what Escape would there: cancel hint mode, not leave the user stuck in it.
+    contour::test::ConfiguredTestApp testApp;
+    auto session = makeDisplaylessSession(testApp.app());
+    auto& terminal = session->terminal();
+    terminal.writeToScreen("see https://example.com/page\r\n");
+    REQUIRE(terminal.inputHandler().mode() == vtbackend::ViMode::Insert);
+
+    REQUIRE((*session)(contour::actions::HintMode { .patterns = "url",
+                                                    .hintAction = vtbackend::HintAction::Open }));
+    REQUIRE(terminal.isHintModeActive());
+    REQUIRE(terminal.inputHandler().mode() == vtbackend::ViMode::Hint);
+
+    CHECK((*session)(contour::actions::ViNormalMode {}));
+    CHECK_FALSE(terminal.isHintModeActive());
+    CHECK(terminal.inputHandler().mode() == vtbackend::ViMode::Insert);
+}
+
 TEST_CASE("TerminalSession: re-enabling key bindings brings back the status line type shown before",
           "[contour][session][config]")
 {
