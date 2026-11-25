@@ -35,6 +35,8 @@ struct FontDef
     std::string italic;
     std::string boldItalic;
     std::string emoji;
+    /// OSC 60 ; reset: go back to the profile's configured fonts; every other field is ignored.
+    bool reset = false;
 };
 
 using LineCount = vtpty::LineCount;

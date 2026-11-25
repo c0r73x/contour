@@ -2107,7 +2107,13 @@ void TerminalSession::applyPendingFontChange(PermissionDecision decision, Permis
     if (decision != PermissionDecision::Allow)
         return;
 
-    if (spec.size != 0.0)
+    if (spec.reset)
+    {
+        // OSC 60 ; reset: the fonts the profile configures, undoing every OSC 50/60 change before it.
+        if (config::TerminalProfile const* profile = _config.profile(_profileName))
+            newFonts = profile->fonts.value();
+    }
+    else if (spec.size != 0.0)
         newFonts.size = text::FontSize { spec.size };
 
     if (!spec.regular.empty())
