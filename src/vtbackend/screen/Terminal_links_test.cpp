@@ -123,6 +123,23 @@ TEST_CASE("Terminal.links.aHeldModifierThatChangesNothingReportsUnchanged", "[te
     CHECK(mock.terminal.followModifiers() == FollowModifiers::Held);
 }
 
+TEST_CASE("Terminal.links.aFollowChordNamingTheBypassModifierIsHeldWithIt", "[terminal][links]")
+{
+    // Shift bypasses mouse reporting and is taken out of a binding's chord, but a follow gesture of
+    // Shift+click names it: only holding Shift holds it, and Ctrl+Shift is no plain Ctrl.
+    auto mock = MockTerm { PageSize { LineCount(3), ColumnCount(20) } };
+    mock.terminal.setLinkFollowModifiers(Modifiers { Modifier::Shift });
+    CHECK(mock.terminal.updateHeldModifiers(Modifier::Shift) == LinkRevealChange::Changed);
+    CHECK(mock.terminal.followModifiers() == FollowModifiers::Held);
+    (void) mock.terminal.updateHeldModifiers(Modifiers {});
+    CHECK(mock.terminal.followModifiers() == FollowModifiers::Released);
+
+    // A Ctrl follow chord is still held with Shift added, as before.
+    mock.terminal.setLinkFollowModifiers(Modifiers { Modifier::Control });
+    (void) mock.terminal.updateHeldModifiers(Modifiers { Modifier::Control } | Modifier::Shift);
+    CHECK(mock.terminal.followModifiers() == FollowModifiers::Held);
+}
+
 TEST_CASE("Terminal.links.aMouseEventCarriesTheHeldChord", "[terminal][links]")
 {
     auto mock = MockTerm { PageSize { LineCount(3), ColumnCount(20) } };
