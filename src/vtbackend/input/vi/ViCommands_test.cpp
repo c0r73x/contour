@@ -1277,4 +1277,12 @@ TEST_CASE("vi.visual: selection starts at the shell cursor when vi mode adds the
     {
         run("line 0", "line 0");
     }
+    SECTION("output longer than the page, cursor on the last line")
+    {
+        run(numberedLines(30), "line 29");
+    }
+    SECTION("output longer than the page, cursor on a prompt below it")
+    {
+        run(numberedLines(30) + "\r\n$ ", "$ ");
+    }
 }
