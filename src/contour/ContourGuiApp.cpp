@@ -1199,6 +1199,7 @@ remote::DaemonLinkConfig ContourGuiApp::daemonLinkConfig(std::shared_ptr<vthost:
         .address = std::move(address),
         .arrival = std::nullopt,
         .askpassRoute = askpassRoute,
+        .reattachHidden = _config.daemon.value().reattachHidden,
     };
 }
 
@@ -1906,7 +1907,7 @@ std::expected<void, std::string> ContourGuiApp::startNativeAttach()
         address = remote::DaemonAddress { .kind = vthost::proto::SwitchDaemonKind::Host, .name = host.label };
         target = NativeAttachTarget {
             .transport = host.factory,
-            .intent = cli::launchIntent(std::nullopt),
+            .intent = cli::launchIntent(std::nullopt, _config.daemon.value().reattachHidden),
         };
     }
     else if (_clientRequest && !_clientRequest->connectTcp.empty())
@@ -1993,7 +1994,7 @@ std::expected<void, std::string> ContourGuiApp::startNativeAttach()
         };
         target = NativeAttachTarget {
             .transport = std::make_shared<vthost::UnixTransportFactory>(controlPath, std::move(ensureDaemon)),
-            .intent = cli::launchIntent(std::nullopt),
+            .intent = cli::launchIntent(std::nullopt, _config.daemon.value().reattachHidden),
         };
     }
     if (!target)
@@ -2033,7 +2034,7 @@ std::expected<void, std::string> ContourGuiApp::startLaunchLink(LaunchAttach att
     // states the directory contour was started in: a link a switch opens later to another daemon has no tab
     // to open there.
     auto config = daemonLinkConfig(std::move(attach.transport),
-                                   cli::launchIntent(workspace),
+                                   cli::launchIntent(workspace, _config.daemon.value().reattachHidden),
                                    std::move(attach.hostLabel),
                                    attach.locality,
                                    std::move(attach.address));

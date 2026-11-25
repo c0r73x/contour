@@ -66,12 +66,17 @@ struct ClientDaemon
 /// What a launch's first connection selects, on any daemon: exactly the workspace `--workspace` names, else
 /// whichever the daemon picks (AttachIntentKind::Default).
 /// @param workspace `--workspace`: the daemon workspace to show; none for a plain launch.
+/// @param reattachHidden `daemon.reattach_hidden`: false makes a plain launch always open a new workspace.
 /// @return The attach intent.
-[[nodiscard]] inline vthost::proto::AttachIntent launchIntent(std::optional<uint64_t> workspace)
+[[nodiscard]] inline vthost::proto::AttachIntent launchIntent(std::optional<uint64_t> workspace,
+                                                              bool reattachHidden = true)
 {
     if (workspace)
         return vthost::proto::AttachIntent { .kind = vthost::proto::AttachIntentKind::Select,
                                              .workspace = *workspace };
+    if (!reattachHidden)
+        return vthost::proto::AttachIntent { .kind = vthost::proto::AttachIntentKind::NewWorkspace,
+                                             .workspace = 0 };
     return vthost::proto::AttachIntent { .kind = vthost::proto::AttachIntentKind::Default, .workspace = 0 };
 }
 

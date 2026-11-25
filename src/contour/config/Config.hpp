@@ -842,6 +842,9 @@ inline constexpr auto MinRestoreInterval = std::chrono::seconds { 5 };
 /// `daemon.restore`: what a daemon keeps of its workspace across a restart.
 struct DaemonRestoreConfig
 {
+    /// `enabled`: whether the daemon writes the snapshot and restores its workspaces from it at start. Off,
+    /// a restarted daemon starts empty and nothing is written (the handover of a live upgrade is unaffected).
+    bool enabled = true;
     /// `scrollback`: whether a restored pane gets its history back. A Config boundary bool (AGENT.md
     /// exception); `contour daemon` converts it to vthost::ScrollbackPersistence.
     bool scrollback = true;
@@ -888,6 +891,14 @@ struct DaemonSettings
 
     /// The scrollback the daemon keeps per session; unset means the hosting profile's `history.limit`.
     std::optional<vtbackend::MaxHistoryLineCount> historyLimit {};
+
+    /// `detach_on_close`: whether closing a window detaches its workspace (it keeps running, hidden, for a
+    /// later window), else ends it like closing its last tab would.
+    bool detachOnClose = true;
+
+    /// `reattach_hidden`: whether a new window (`contour client`, NewTerminal) shows the workspace a
+    /// window left most recently, else always a new workspace of its own.
+    bool reattachHidden = true;
 
     /// What the daemon keeps of its workspace across a restart (`daemon.restore`).
     DaemonRestoreConfig restore {};

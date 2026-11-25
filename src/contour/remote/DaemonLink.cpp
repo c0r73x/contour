@@ -947,9 +947,12 @@ std::expected<void, std::string> DaemonLink::openSiblingWindow(vtworkspace::Work
         case session::SiblingShows::DaemonsChoice:
             // The daemon decides, as for a launch: a workspace no window shows, else a new one. It needs
             // nothing the asking window shows, and no tab to activate.
-            config.controller.intent =
-                vthost::proto::AttachIntent { .kind = vthost::proto::AttachIntentKind::Default,
-                                              .workspace = 0 };
+            // daemon.reattach_hidden off: never a hidden workspace, always a fresh one.
+            config.controller.intent = vthost::proto::AttachIntent {
+                .kind = _siblingTemplate.reattachHidden ? vthost::proto::AttachIntentKind::Default
+                                                        : vthost::proto::AttachIntentKind::NewWorkspace,
+                .workspace = 0
+            };
             activeTab = std::nullopt;
             break;
     }

@@ -125,6 +125,8 @@ struct DaemonLinkConfig
     std::optional<SwitchArrival> arrival = std::nullopt;
     /// The window whose ssh prompts this link's attach shows: the one that started it, or AnyWindow.
     askpass::AskpassRouteId askpassRoute = askpass::AnyWindow;
+    /// `daemon.reattach_hidden`: false makes a sibling window the daemon picks for always a new workspace.
+    bool reattachHidden = true;
 };
 
 /// The launch's link: it adopts the boot window.

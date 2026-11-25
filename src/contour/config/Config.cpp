@@ -3356,6 +3356,8 @@ void YAMLConfigReader::loadFromEntry(YAML::Node const& node, std::string const& 
         where.historyLimit = value;
     }
 
+    loadGuarded(child, "detach_on_close", where.detachOnClose);
+    loadGuarded(child, "reattach_hidden", where.reattachHidden);
     loadFromEntry(child, "restore", where.restore);
 
     if (auto const keeper = child["keeper"]; keeper && keeper.IsMap())
@@ -4421,6 +4423,7 @@ void YAMLConfigReader::loadFromEntry(YAML::Node const& node,
     if (!child)
         return;
 
+    loadGuarded(child, "enabled", where.enabled);
     loadGuarded(child, "scrollback", where.scrollback);
 
     if (auto const lines = child["scrollback_lines"])

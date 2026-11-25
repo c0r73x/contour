@@ -1560,7 +1560,10 @@ int ContourApp::serveDaemon(DaemonVerbOptions const& options,
     // Read before the configuration moves into the catalog. Not reloaded: a running daemon keeps the file
     // and the schedule it started with.
     auto const daemonName = vthost::daemonNameFromOption(options.name).name;
-    if (auto snapshotPath = snapshotPathOf(processEnvironment(), daemonName, config.socketPath))
+    if (!hostConfig->daemon.value().restore.enabled)
+        // daemon.restore.enabled off: an empty snapshot path restores nothing and writes nothing.
+        config.persistence = workspacePersistenceOf(hostConfig->daemon.value().restore, {});
+    else if (auto snapshotPath = snapshotPathOf(processEnvironment(), daemonName, config.socketPath))
         config.persistence =
             workspacePersistenceOf(hostConfig->daemon.value().restore, *std::move(snapshotPath));
     else
