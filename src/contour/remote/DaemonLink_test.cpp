@@ -597,6 +597,35 @@ TEST_CASE("DaemonLink: a closed window's workspace stays on the daemon, selected
     drainGuiEvents();
 }
 
+TEST_CASE("DaemonLink: with detach_on_close off, a closed window's workspace ends on the daemon",
+          "[attach][link]")
+{
+    auto daemon = DaemonFixture {};
+    auto const ids = seedWorkspaces(daemon, 1);
+    auto rig = LinkRig { daemon.endpoint(), {}, {}, launch() };
+    rig.app.app().config().daemon.value().detachOnClose = false;
+    auto& link = *rig.link;
+    // A local window stays open: the link's last window is not the process's.
+    auto const local = contour::test::ScopedController { rig.app.manager() };
+    auto const boot = contour::test::ScopedController { rig.app.manager() };
+    REQUIRE(pollUntilAttached(link, 10s).has_value());
+    REQUIRE(link.bindPendingWindow(*boot.controller) == contour::remote::WindowAdoption::Adopted);
+    REQUIRE(waitUntil([&] { return !sessionsOf(rig.app.manager(), boot.id).empty(); }));
+    auto const panes = watchedSessionsOf(rig.app.manager(), boot.id);
+
+    boot.controller->closeWindow();
+
+    // Its sessions are ended upstream, not left hidden for the next window whose shell exits to land on. The
+    // only workspace is kept, emptied, so it is the tabs that are checked.
+    drainGuiEvents();
+    CHECK(daemon.waitUntilOnDaemon([&] {
+        auto const* workspace = daemon.host->model().workspace(vtworkspace::WorkspaceId { ids[0] });
+        return workspace == nullptr || workspace->tabCount() == 0;
+    }));
+    endClosedSessions(panes);
+    drainGuiEvents();
+}
+
 // Review (PR 3, item 4): a daemon restarting with a restore numbers its workspaces anew, so the id a window
 // selected names another workspace of the new run, or none: the window must display what the new run selects
 // for it, and the application keep its window.

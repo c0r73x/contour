@@ -2306,6 +2306,15 @@ void WindowController::closeWindow()
     for (auto const workspace: _owned)
         std::ranges::copy(_manager.sessionsOfWindow(workspace), std::back_inserter(doomed));
 
+    // How the sessions end goes upstream now, while their tabs still name this window and so the daemon
+    // link serving it: once the model lets go of the workspaces, a session's host resolves to the local
+    // factory, which tells no one. A Destroy authored after the removal never reached the daemon, so with
+    // `daemon.detach_on_close` off every closed window left its workspace hidden there, and a later window
+    // whose shell exited was moved onto it.
+    auto const end = _manager.app().config().daemon.value().detachOnClose ? session::SessionEnd::Detach
+                                                                          : session::SessionEnd::Destroy;
+    _manager.endUpstream(doomed, end);
+
     for (auto const workspace: _owned)
         _manager.model().removeWorkspace(workspace);
 
@@ -2328,9 +2337,8 @@ void WindowController::closeWindow()
     // `contour client` shows them again, which is the whole point of daemon mode. Ending one is the
     // ClosePane/CloseTab action, not this -- unless `daemon.detach_on_close` is off, which makes closing a
     // window end its sessions upstream too (SessionEnd::Destroy), the way closing its last tab would.
-    _manager.terminate(doomed,
-                       _manager.app().config().daemon.value().detachOnClose ? session::SessionEnd::Detach
-                                                                            : session::SessionEnd::Destroy);
+    // Ended upstream above; what is left is the local view's.
+    _manager.terminate(doomed, session::SessionEnd::Detach);
 
     // Close the OS window itself. When the user clicked the close button, the QQuickWindow is already
     // closing and this is a harmless no-op; when we got here programmatically (an emptied window after a

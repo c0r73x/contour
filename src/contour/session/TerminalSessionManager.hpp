@@ -1860,6 +1860,16 @@ class TerminalSessionManager: public QObject, public vtworkspace::ModelEvents
     {
         terminateSessions(sessions, end);
     }
+    /// Tells the host of each of @p sessions that it ends as @p end says (endRemotely()), for a caller about
+    /// to take their tabs out of the model, which takes away the window that names the host to tell.
+    /// terminate() them after with SessionEnd::Detach: what is left then is only the local view's.
+    /// @param sessions The backing sessions whose panes go.
+    /// @param end Whether the user ended them or only their local view is going away.
+    void endUpstream(std::span<TerminalSession* const> sessions, SessionEnd end)
+    {
+        for (auto* session: sessions)
+            endRemotely(session, end);
+    }
     // }}}
 
     /// Tells every live session of a window bound to @p binding that its daemon connection died, before
