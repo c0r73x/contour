@@ -7204,6 +7204,11 @@ bool TerminalSession::operator()(actions::ViNormalMode)
             terminal().inputHandler().setMode(ViMode::Normal);
         else if (terminal().inputHandler().mode() == ViMode::Normal)
             terminal().inputHandler().setMode(ViMode::Insert);
+        // The same `~Insert` binding matches in the visual modes, so the Escape never reaches
+        // ViInputHandler's own visual-mode Escape handling: doing nothing here left visual mode
+        // stuck until `v` or `y`. Escape out of visual mode means back to Normal, as in Vim.
+        else if (terminal().inputHandler().isVisualMode())
+            terminal().inputHandler().setMode(ViMode::Normal);
     }
     return true;
 }
