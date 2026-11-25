@@ -264,6 +264,32 @@ class NativeWindowFrame
 /// so "never applied" (an absent property, which converts to 0) is distinct from Client's 0.
 inline constexpr auto AppliedDecorationKey = "contour_applied_frame_decoration";
 
+/// Whether a window's content lets the desktop through.
+enum class WindowTranslucency : uint8_t
+{
+    Opaque,      ///< The profile's background covers the window: AppKit's background and shadow may stay.
+    Translucent, ///< The profile's background opacity is below 1: nothing native may draw behind it.
+};
+
+/// The translucency a profile's background opacity (0..255, 255 = opaque) calls for.
+[[nodiscard]] constexpr WindowTranslucency translucencyOf(uint8_t backgroundOpacity) noexcept
+{
+    return backgroundOpacity < 255 ? WindowTranslucency::Translucent : WindowTranslucency::Opaque;
+}
+
+/// The window property carrying the @ref WindowTranslucency to the frame adapter (its int value; absent =
+/// Opaque). Set before every apply, and read ahead of @ref needsFrameApplied, so a profile change alone
+/// takes effect.
+inline constexpr auto TranslucencyKey = "contour_window_translucency";
+
+/// The @ref WindowTranslucency @p window carries under @ref TranslucencyKey.
+[[nodiscard]] inline WindowTranslucency translucencyOf(QWindow const& window)
+{
+    return window.property(TranslucencyKey).toInt() == static_cast<int>(WindowTranslucency::Translucent)
+               ? WindowTranslucency::Translucent
+               : WindowTranslucency::Opaque;
+}
+
 [[nodiscard]] inline bool needsFrameApplied(QWindow& window, WindowDecoration decoration)
 {
     auto const wanted = static_cast<int>(decoration) + 1;

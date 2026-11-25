@@ -44,6 +44,9 @@ class CocoaWindowFrame final: public NativeWindowFrame
         if (nsWindow == nil)
             return;
 
+        // Ahead of the early return, so a reloaded opacity takes effect alone.
+        applyTranslucency(nsWindow, translucencyOf(window));
+
         if (!needsFrameApplied(window, decoration))
             return;
 
@@ -68,10 +71,19 @@ class CocoaWindowFrame final: public NativeWindowFrame
         // The band moves the window itself (startSystemMove, which still works here). Left movable, AppKit
         // would also move it on a drag that began on a tab: Qt's view of a translucent window is not opaque.
         nsWindow.movable = NO;
+    }
 
-        // Belt and braces: a window whose content is fully transparent can end up with hasShadow
-        // cleared, and without it none of the above shows.
-        nsWindow.hasShadow = YES;
+    /// A translucent window shows the desktop only if AppKit paints nothing behind Qt's layer: Qt clears the
+    /// background for frameless translucent windows alone, and this one stays decorated. Its shadow goes
+    /// too, as Alacritty's does: AppKit derives it from the window's alpha and smears it through the
+    /// translucent content. Opaque windows get both back.
+    static void applyTranslucency(NSWindow* nsWindow, WindowTranslucency translucency)
+    {
+        auto const translucent = translucency == WindowTranslucency::Translucent;
+        nsWindow.opaque = NO;
+        nsWindow.backgroundColor = translucent ? NSColor.clearColor : NSColor.windowBackgroundColor;
+        nsWindow.hasShadow = translucent ? NO : YES;
+        [nsWindow invalidateShadow];
     }
 
     void invalidateShadow(QWindow& window) override

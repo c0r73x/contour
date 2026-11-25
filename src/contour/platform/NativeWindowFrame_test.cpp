@@ -233,3 +233,20 @@ TEST_CASE("currentFramePlatform names the platform this binary was built for", "
     CHECK(currentFramePlatform() == FramePlatform::Other);
 #endif
 }
+
+TEST_CASE("only a fully opaque background keeps the window opaque", "[contour][frame]")
+{
+    CHECK(translucencyOf(uint8_t { 255 }) == WindowTranslucency::Opaque);
+    CHECK(translucencyOf(uint8_t { 254 }) == WindowTranslucency::Translucent);
+    CHECK(translucencyOf(uint8_t { 0 }) == WindowTranslucency::Translucent);
+}
+
+TEST_CASE("a window without a recorded translucency is opaque", "[contour][frame]")
+{
+    auto window = QWindow {};
+    CHECK(translucencyOf(window) == WindowTranslucency::Opaque);
+    window.setProperty(TranslucencyKey, static_cast<int>(WindowTranslucency::Translucent));
+    CHECK(translucencyOf(window) == WindowTranslucency::Translucent);
+    window.setProperty(TranslucencyKey, static_cast<int>(WindowTranslucency::Opaque));
+    CHECK(translucencyOf(window) == WindowTranslucency::Opaque);
+}
