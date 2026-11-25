@@ -1236,3 +1236,45 @@ TEST_CASE("vi.link: ]x skips paths on the alternate screen unless enabled", "[vi
     CHECK(viCursor(term) == at(0, 2));
 }
 // }}}
+
+// With the status line off (`status_line.display: none`), entering vi mode pushes the indicator status
+// line, which takes a row from the page. The Vi cursor must still start on the shell cursor's text, and
+// `v` must anchor the selection there, wherever the shell cursor sat on the page.
+TEST_CASE("vi.visual: selection starts at the shell cursor when vi mode adds the status line", "[vi]")
+{
+    auto const run = [](std::string_view text, std::string_view expectedLine) {
+        auto mock = vtbackend::MockTerm<vtpty::MockPty> {
+            vtpty::PageSize { .lines = vtbackend::LineCount(6), .columns = vtbackend::ColumnCount(40) },
+            vtbackend::LineCount(10),
+            1024,
+            [text](auto& mock) {
+                mock.terminal.setStatusDisplay(vtbackend::StatusDisplayType::None);
+                mock.writeToScreen(text);
+            }
+        };
+        mock.terminal.inputHandler().setMode(vtbackend::ViMode::Normal);
+        auto const& grid = mock.terminal.primaryScreen().grid();
+        INFO("vi cursor " << mock.terminal.normalModeCursorPosition().line.value << ":"
+                          << mock.terminal.normalModeCursorPosition().column.value);
+        CHECK(grid.lineText(mock.terminal.normalModeCursorPosition().line).starts_with(expectedLine));
+
+        mock.sendCharSequence("v");
+        REQUIRE(mock.terminal.inputHandler().mode() == vtbackend::ViMode::Visual);
+        REQUIRE(mock.terminal.selector() != nullptr);
+        CHECK(mock.terminal.selector()->from() == mock.terminal.normalModeCursorPosition());
+        CHECK(grid.lineText(mock.terminal.selector()->from().line).starts_with(expectedLine));
+    };
+
+    SECTION("shell cursor on the bottom row")
+    {
+        run(numberedLines(6), "line 5");
+    }
+    SECTION("shell cursor mid-page")
+    {
+        run("line 0\r\nline 1", "line 1");
+    }
+    SECTION("shell cursor on the top row")
+    {
+        run("line 0", "line 0");
+    }
+}
