@@ -1191,6 +1191,10 @@ class WindowController:
     /// (platform::BareWindowKey) so the adapter can hide the OS's own window controls.
     void applyNativeFrame(platform::WindowDecoration decoration);
 
+    /// @return Whether the active session's profile (the default one before any attaches) lets the desktop
+    /// show through, which the native frame needs to keep AppKit's background and shadow out of the way.
+    [[nodiscard]] platform::WindowTranslucency windowTranslucency() const;
+
     /// @return What this window asks the OS to draw behind and around its band now: its surface
     ///         (titleBandSurface()) in the effective colour scheme, for a tabbed window.
     [[nodiscard]] platform::TitleBandRequest titleBandRequest() const;

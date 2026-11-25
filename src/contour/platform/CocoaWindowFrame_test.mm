@@ -200,3 +200,29 @@ TEST_CASE("a runtime title-bar toggle keeps the full-size content view", "[displ
     REQUIRE(nsWindow != nil);
     checkClientBandFrame(nsWindow);
 }
+
+TEST_CASE("a translucent profile clears AppKit's background and drops the shadow", "[display][cocoa][frame]")
+{
+    // Qt clears the background only for frameless translucent windows; this one stays decorated, so
+    // without the frame AppKit paints its window background behind the whole transparent layer.
+    REQUIRE_COCOA_OR_SKIP();
+    using contour::platform::TranslucencyKey;
+    using contour::platform::WindowTranslucency;
+    auto root = ShownRoot {};
+    auto const frame = contour::platform::makeCocoaWindowFrame();
+    REQUIRE(frame != nullptr);
+    NSWindow* const nsWindow = root.nsWindow();
+    REQUIRE(nsWindow != nil);
+
+    root.window->setProperty(TranslucencyKey, static_cast<int>(WindowTranslucency::Translucent));
+    frame->apply(*root.window, WindowDecoration::Client);
+    CHECK(nsWindow.opaque == NO);
+    CHECK(nsWindow.backgroundColor.alphaComponent == 0.0);
+    CHECK(nsWindow.hasShadow == NO);
+
+    // A reload back to an opaque profile: the decoration did not change, and both come back anyway.
+    root.window->setProperty(TranslucencyKey, static_cast<int>(WindowTranslucency::Opaque));
+    frame->apply(*root.window, WindowDecoration::Client);
+    CHECK(nsWindow.backgroundColor.alphaComponent == 1.0);
+    checkClientBandFrame(nsWindow);
+}

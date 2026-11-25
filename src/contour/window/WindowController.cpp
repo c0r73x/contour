@@ -274,6 +274,11 @@ WindowController::WindowController(session::TerminalSessionManager& manager,
     // The band's centre follows the tab-bar gate, its edge and the host's connection (titleBand()); under
     // Minimal an empty centre is the bare band, which is shorter and detaches the compact toolbar.
     connect(this, &WindowController::activeSessionChanged, this, &WindowController::followActiveStickyHeader);
+    // A pane on another profile may change the window's translucency, which only the native frame can show.
+    connect(this, &WindowController::activeSessionChanged, this, [this] {
+        if (_nativeFrame && _osWindow)
+            applyNativeFrame(decoration());
+    });
     connect(this, &WindowController::tabBarShouldShowChanged, this, &WindowController::refreshTitleBand);
     connect(this, &WindowController::tabBarPositionChanged, this, &WindowController::refreshTitleBand);
     connect(this, &WindowController::hostChipStateChanged, this, &WindowController::refreshTitleBand);
@@ -2903,7 +2908,17 @@ bool WindowController::bareWindow() const noexcept
 void WindowController::applyNativeFrame(platform::WindowDecoration decoration)
 {
     _osWindow->setProperty(platform::BareWindowKey, bareWindow());
+    _osWindow->setProperty(platform::TranslucencyKey, static_cast<int>(windowTranslucency()));
     _nativeFrame->apply(*_osWindow, decoration);
+}
+
+platform::WindowTranslucency WindowController::windowTranslucency() const
+{
+    // Before the first session attaches there is no profile to read; the default profile is the one that
+    // session will most likely carry, and the active-session change re-applies the frame once it does.
+    auto const* session = activeSession();
+    auto const& profile = session != nullptr ? session->profile() : _manager.app().config().profile();
+    return platform::translucencyOf(static_cast<uint8_t>(profile.background.value().opacity));
 }
 
 TitleBand WindowController::titleBand() const
