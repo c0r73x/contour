@@ -35,6 +35,7 @@
 #include <vtbackend/input/InputBinding.hpp>
 #include <vtbackend/input/InputGenerator.hpp>
 #include <vtbackend/input/MatchModes.hpp>
+#include <vtbackend/input/vi/HintTypes.hpp>
 #include <vtbackend/links/LinkPatterns.hpp>
 #include <vtbackend/screen/GutterSettings.hpp>
 #include <vtbackend/screen/Settings.hpp>
@@ -842,6 +843,9 @@ inline constexpr auto MinRestoreInterval = std::chrono::seconds { 5 };
 /// `daemon.restore`: what a daemon keeps of its workspace across a restart.
 struct DaemonRestoreConfig
 {
+    /// `enabled`: whether the daemon writes the snapshot and restores its workspaces from it at start. Off,
+    /// a restarted daemon starts empty and nothing is written (the handover of a live upgrade is unaffected).
+    bool enabled = true;
     /// `scrollback`: whether a restored pane gets its history back. A Config boundary bool (AGENT.md
     /// exception); `contour daemon` converts it to vthost::ScrollbackPersistence.
     bool scrollback = true;
@@ -888,6 +892,14 @@ struct DaemonSettings
 
     /// The scrollback the daemon keeps per session; unset means the hosting profile's `history.limit`.
     std::optional<vtbackend::MaxHistoryLineCount> historyLimit {};
+
+    /// `detach_on_close`: whether closing a window detaches its workspace (it keeps running, hidden, for a
+    /// later window), else ends it like closing its last tab would.
+    bool detachOnClose = true;
+
+    /// `reattach_hidden`: whether a new window (`contour client`, NewTerminal) shows the workspace a
+    /// window left most recently, else always a new workspace of its own.
+    bool reattachHidden = true;
 
     /// What the daemon keeps of its workspace across a restart (`daemon.restore`).
     DaemonRestoreConfig restore {};
@@ -1141,6 +1153,8 @@ struct TerminalProfile
     };
     ConfigEntry<std::chrono::milliseconds, documentation::CursorMotionAnimationDuration>
         cursorMotionAnimationDuration { std::chrono::milliseconds { 80 } };
+    ConfigEntry<bool, documentation::CursorTrail> cursorTrail { false };
+    ConfigEntry<int, documentation::CursorMotionThreshold> cursorMotionThreshold { 0 };
     ConfigEntry<InputModeConfig, documentation::ModeInsert> modeInsert { CursorConfig {
         .cursorShape = editionDefaults(defaultsEdition).insertCursorShape,
         .cursorDisplay = vtbackend::CursorDisplay::Steady,
@@ -1174,6 +1188,8 @@ struct TerminalProfile
     ConfigEntry<vtbackend::LineCount, documentation::HintScrollbackLines> hintScrollbackLines {
         vtbackend::LineCount { 1000 }
     };
+    ConfigEntry<std::string, documentation::HintAlphabet> hintAlphabet { std::string {
+        vtbackend::DefaultHintAlphabet } };
 
     ConfigEntry<std::string, documentation::WMClass> wmClass { CONTOUR_APP_ID };
     ConfigEntry<std::string, documentation::TabLabel> tabLabel { "{TabName}" };
@@ -1311,6 +1327,10 @@ struct Config
     ConfigEntry<WindowControlStyle, documentation::WindowControlStyle> windowControlStyle {
         WindowControlStyle::Auto
     };
+    // Application-wide like windowControlStyle: whether a window without a tab strip draws no chrome at all
+    // -- no title band, no window controls (macOS hides its traffic lights too). Meant for tiling window
+    // managers, where the window is placed and closed from the keyboard.
+    ConfigEntry<bool, documentation::BareWindow> bareWindow { false };
     // Application-wide like windowControlStyle: a window has one chrome, so the density cannot be a
     // per-profile answer. Comfortable in both editions, so a column keeps a third edition a row.
     ConfigEntry<ChromeDensity, documentation::ChromeDensity> chromeDensity {

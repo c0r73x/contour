@@ -3181,7 +3181,7 @@ class Terminal: public IStatusLinePublishTarget
         if (_cursorMotion.active && !_cursorMotion.isComplete(now))
             return _cursorMotion.progress(now);
         if (cursorGridPosition != _cursorMotion.toPosition
-            && _settings.cursorMotionAnimationDuration.count() > 0)
+            && cursorMoveAnimates(_cursorMotion.toPosition, cursorGridPosition))
             return 0.0f;
         return 1.0f;
     }
@@ -4296,6 +4296,17 @@ class Terminal: public IStatusLinePublishTarget
     void reconfigureFactorySettings(Settings configured);
 
     [[nodiscard]] Settings const& settings() const noexcept { return _settings; }
+
+    /// Whether a cursor move from @p from to @p to animates: a motion duration is set and the move covers at
+    /// least `cursor_motion_threshold` cells.
+    [[nodiscard]] bool cursorMoveAnimates(CellLocation from, CellLocation to) const noexcept
+    {
+        if (_settings.cursorMotionAnimationDuration.count() <= 0)
+            return false;
+        auto const lines = std::abs(*to.line - *from.line);
+        auto const columns = std::abs(*to.column - *from.column);
+        return std::max(lines, columns) >= _settings.cursorMotionThreshold;
+    }
     [[nodiscard]] Settings& settings() noexcept { return _settings; }
 
     // Renders current visual terminal state to the render buffer.

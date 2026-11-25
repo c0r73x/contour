@@ -264,6 +264,11 @@ class NativeWindowFrame
 /// so "never applied" (an absent property, which converts to 0) is distinct from Client's 0.
 inline constexpr auto AppliedDecorationKey = "contour_applied_frame_decoration";
 
+/// The window property carrying the bare_window setting to the frame adapter (a bool; absent = false).
+/// The window controller sets it before every @ref NativeWindowFrame::apply, and the adapter reads it on
+/// every call, ahead of @ref needsFrameApplied, so toggling the setting alone takes effect.
+inline constexpr auto BareWindowKey = "contour_bare_window";
+
 [[nodiscard]] inline bool needsFrameApplied(QWindow& window, WindowDecoration decoration)
 {
     auto const wanted = static_cast<int>(decoration) + 1;

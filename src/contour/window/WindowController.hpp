@@ -206,6 +206,8 @@ class WindowController:
     // unless that session's header lives in the band or a pane header, and has a block to name.
     Q_PROPERTY(QVariantMap activeStickyHeader READ activeStickyHeader NOTIFY activeStickyHeaderChanged)
     Q_PROPERTY(bool titleBarVisible READ titleBarVisible NOTIFY titleBarVisibleChanged)
+    /// bare_window: no band at all while no tab strip shows (@see titleBand()).
+    Q_PROPERTY(bool bareWindow READ bareWindow NOTIFY titleBarVisibleChanged)
     // All four follow titleBarVisible, so they re-evaluate on the same signal.
     Q_PROPERTY(bool needsFramelessHint READ needsFramelessHint NOTIFY titleBarVisibleChanged)
     // What the window is for: its WindowRole as an int, and the Qt window flags its WindowLevel adds to the
@@ -1181,6 +1183,13 @@ class WindowController:
     /// edge and the host chip's notice.
     /// @return The band.
     [[nodiscard]] TitleBand titleBand() const;
+
+    /// Whether bare_window is on: a window without a tab strip draws no chrome at all.
+    [[nodiscard]] bool bareWindow() const noexcept;
+
+    /// Hands the native frame @p decoration, with the bare_window setting recorded on the window first
+    /// (platform::BareWindowKey) so the adapter can hide the OS's own window controls.
+    void applyNativeFrame(platform::WindowDecoration decoration);
 
     /// @return What this window asks the OS to draw behind and around its band now: its surface
     ///         (titleBandSurface()) in the effective colour scheme, for a tabbed window.

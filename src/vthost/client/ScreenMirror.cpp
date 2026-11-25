@@ -1234,6 +1234,17 @@ void ScreenMirror::applyEvent(proto::SessionEventPdu const& event)
                            _terminal->copyToClipboard(
                                clipboard.data, vtbackend::ClipboardWriter::Program, *targets);
                    },
+                   [this](proto::SessionFont const& font) {
+                       // Through the terminal, so the CLIENT's change_font permission decides it, as it
+                       // decides a local OSC 50 / OSC 60.
+                       _terminal->setFontDef(vtbackend::FontDef { .size = double(font.sizeCenti) / 100.0,
+                                                                  .regular = font.regular,
+                                                                  .bold = font.bold,
+                                                                  .italic = font.italic,
+                                                                  .boldItalic = font.boldItalic,
+                                                                  .emoji = font.emoji,
+                                                                  .reset = font.reset });
+                   },
                    [this](proto::ProgramStatus const& status) {
                        auto const guard = std::lock_guard { *_terminal };
                        syncProgramStatus(status.records, status.timing);

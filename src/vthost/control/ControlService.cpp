@@ -1528,6 +1528,9 @@ void ControlService::sessionSignal(SessionId session, SessionSignal const& signa
                                                        .payload = vtcontrol::TitleChangedEvent {
                                                            .title = vtcontrol::toValidUtf8(title.title) } });
                    },
+                   [&](FontChangeSignal const&) {
+                       // A client's own business: nothing a control subscriber is told.
+                   },
                    [&](WorkingDirectoryChangedSignal const&) {
                        auto cwd = std::string {};
                        if (auto const* terminal = _host.terminal(session))

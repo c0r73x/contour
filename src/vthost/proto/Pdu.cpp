@@ -370,6 +370,10 @@ namespace
     {
         return std::to_underlying(PduType::SetWorkspaceColor);
     }
+    [[nodiscard]] constexpr uint64_t tagOf(SessionFont const&) noexcept
+    {
+        return std::to_underlying(PduType::SessionFont);
+    }
 
     [[nodiscard]] constexpr uint64_t tagOf(AuthChallenge const&) noexcept
     {
@@ -1275,6 +1279,18 @@ namespace
     {
         out.varint(pdu.workspace);
         encodeWorkspaceColor(out, pdu.color);
+    }
+
+    void encodeBody(Writer& out, SessionFont const& pdu)
+    {
+        out.varint(pdu.session);
+        out.varint(pdu.sizeCenti);
+        out.string(pdu.regular);
+        out.string(pdu.bold);
+        out.string(pdu.italic);
+        out.string(pdu.boldItalic);
+        out.string(pdu.emoji);
+        out.u8(pdu.reset ? 1 : 0);
     }
 
     void encodeBody(Writer& out, SwitchRequest const& pdu)
@@ -2691,6 +2707,20 @@ namespace
         return pdu;
     }
 
+    DecodeResult decodeSessionFont(Reader& in)
+    {
+        auto pdu = SessionFont {};
+        auto error = DecodeError {};
+        auto reset = uint8_t {};
+        if (!assign(in.varint(), pdu.session, error) || !assign(in.varint(), pdu.sizeCenti, error)
+            || !assign(in.string(), pdu.regular, error) || !assign(in.string(), pdu.bold, error)
+            || !assign(in.string(), pdu.italic, error) || !assign(in.string(), pdu.boldItalic, error)
+            || !assign(in.string(), pdu.emoji, error) || !assign(in.u8(), reset, error))
+            return std::unexpected(error);
+        pdu.reset = reset != 0;
+        return pdu;
+    }
+
     DecodeResult decodeSetWorkspaceColor(Reader& in)
     {
         auto pdu = SetWorkspaceColor {};
@@ -2968,6 +2998,7 @@ namespace
         DecodeRow { PduType::Goodbye, decodeGoodbye },
         DecodeRow { PduType::OpenFirstTab, decodeOpenFirstTab },
         DecodeRow { PduType::SetWorkspaceColor, decodeSetWorkspaceColor },
+        DecodeRow { PduType::SessionFont, decodeSessionFont },
     };
 
     // The catalog and its decode half must stay in step. Invalid is the one alternative with

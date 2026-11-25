@@ -2,6 +2,8 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
+#include <string_view>
 
 namespace vtbackend
 {
@@ -22,5 +24,12 @@ enum class HintScope : uint8_t
     Visible = 0,    ///< The visible page only.
     Scrollback = 1, ///< The visible page plus scrollback history, up to a configured limit.
 };
+
+/// The label alphabet hint mode uses when none is configured.
+inline constexpr std::string_view DefaultHintAlphabet = "abcdefghijklmnopqrstuvwxyz";
+
+/// @p alphabet as hint mode uses it: lowercased, printable ASCII other than space, each character once.
+/// Fewer than two characters left cannot build labels, and select @ref DefaultHintAlphabet instead.
+[[nodiscard]] std::string normalizeHintAlphabet(std::string_view alphabet);
 
 } // namespace vtbackend

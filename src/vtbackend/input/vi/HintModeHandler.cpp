@@ -14,11 +14,23 @@ using namespace std;
 namespace vtbackend
 {
 
-namespace
+std::string normalizeHintAlphabet(std::string_view alphabet)
 {
-    /// The characters labels are built from — the same set @ref HintModeHandler::processInput accepts.
-    constexpr auto Alphabet = string_view { "abcdefghijklmnopqrstuvwxyz" };
-} // namespace
+    auto result = std::string {};
+    for (auto ch: alphabet)
+    {
+        if (ch >= 'A' && ch <= 'Z')
+            ch = static_cast<char>(ch - 'A' + 'a');
+        // Printable ASCII only, and never a key hint mode itself reads (Esc, Backspace) or a space.
+        if (ch <= ' ' || ch > '~')
+            continue;
+        if (result.find(ch) == std::string::npos)
+            result += ch;
+    }
+    if (result.size() < 2)
+        return std::string { DefaultHintAlphabet };
+    return result;
+}
 
 HintModeHandler::HintModeHandler(Executor& executor): _executor { executor }
 {
@@ -107,9 +119,13 @@ void HintModeHandler::rescanLines(HintScanArea const& area)
     _filteredMatches = _allMatches;
 }
 
-void HintModeHandler::activate(HintScanArea const& area, HintPatternSet patterns, HintAction action)
+void HintModeHandler::activate(HintScanArea const& area,
+                               HintPatternSet patterns,
+                               HintAction action,
+                               std::string_view alphabet)
 {
     _action = action;
+    _alphabet = normalizeHintAlphabet(alphabet);
     _patterns = std::move(patterns);
     rescanLines(area);
 
@@ -192,12 +208,12 @@ bool HintModeHandler::processInput(char32_t ch)
         return true;
     }
 
-    // Only accept lowercase alphabetic characters for label typing.
+    // Only accept characters of the label alphabet (case-insensitively: it is stored lowercase).
     if (ch >= U'A' && ch <= U'Z')
         ch = ch - U'A' + U'a'; // Normalize to lowercase.
 
-    if (ch < U'a' || ch > U'z')
-        return true; // Ignore non-alphabetic input.
+    if (ch > U'~' || _alphabet.find(static_cast<char>(ch)) == std::string::npos)
+        return true; // Ignore input that no label contains.
 
     _filter += static_cast<char>(ch);
     updateFilteredMatches();
@@ -229,9 +245,10 @@ void HintModeHandler::assignLabels()
     if (matchCount == 0)
         return;
 
-    auto const radix = Alphabet.size();
+    auto const& alphabet = _alphabet;
+    auto const radix = alphabet.size();
 
-    // The narrowest width that can name every match, 26 labels per character. Every label gets the
+    // The narrowest width that can name every match, radix labels per character. Every label gets the
     // same width so none is a prefix of another, which is what lets progressive filtering
     // auto-select the moment the typed prefix is unique.
     auto labelWidth = size_t { 1 };
@@ -240,11 +257,11 @@ void HintModeHandler::assignLabels()
 
     for (auto const i: std::views::iota(size_t { 0 }, matchCount))
     {
-        auto label = string(labelWidth, Alphabet.front());
+        auto label = string(labelWidth, alphabet.front());
         auto rest = i;
         for (auto digit = labelWidth; digit > 0; --digit)
         {
-            label[digit - 1] = Alphabet[rest % radix];
+            label[digit - 1] = alphabet[rest % radix];
             rest /= radix;
         }
         _allMatches[i].label = std::move(label);

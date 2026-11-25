@@ -18,10 +18,16 @@ Item {
     property string pendingSource: ""
     property real pendingVolume: -1
 
+    /// Whether a bell was ever rung here; the player loads only then.
+    property bool wanted: false
+
     /// Plays @p source at @p volume now, or as soon as the player has loaded.
     /// @param source The sound's URL; empty plays nothing.
     /// @param volume The playback volume (0.0 to 1.0).
     function play(source, volume) {
+        // The player (and QtMultimedia with it) loads on the first bell rung, never for a silent window.
+        if (String(source) !== "")
+            bell.wanted = true;
         if (loader.status === Loader.Ready) {
             loader.item.source = source;
             loader.item.play(volume);
@@ -33,7 +39,8 @@ Item {
 
     Loader {
         id: loader
-        active: terminalSessions.multimediaReady
+        active: terminalSessions.multimediaReady && bell.wanted
+        asynchronous: true
         source: bell.playerSource
         onLoaded: {
             if (bell.pendingVolume < 0)

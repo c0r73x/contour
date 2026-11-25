@@ -48,6 +48,9 @@ inline constexpr auto NamedKeyRows = std::array {
     NamedKeyRow { .qt = Qt::Key_Tab, .key = vtbackend::Key::Tab },
     NamedKeyRow { .qt = Qt::Key_Backspace, .key = vtbackend::Key::Backspace },
     NamedKeyRow { .qt = Qt::Key_Insert, .key = vtbackend::Key::Insert },
+    // macOS: a PC keyboard's Insert key arrives as kVK_Help, which Qt reports as Key_Help. No Apple
+    // keyboard has a Help key any more, so treating it as Insert costs nothing and makes Shift+Insert work.
+    NamedKeyRow { .qt = Qt::Key_Help, .key = vtbackend::Key::Insert },
     NamedKeyRow { .qt = Qt::Key_Delete, .key = vtbackend::Key::Delete },
     NamedKeyRow { .qt = Qt::Key_Right, .key = vtbackend::Key::RightArrow },
     NamedKeyRow { .qt = Qt::Key_Left, .key = vtbackend::Key::LeftArrow },

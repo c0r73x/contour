@@ -1846,11 +1846,21 @@ constexpr StringLiteral DaemonConfig {
     "    {comment} hosting profile's history.limit.\n"
     "    history_limit: {}\n"
     "\n"
+    "    {comment} Whether closing a window detaches its workspace (it keeps running, hidden, and a later\n"
+    "    {comment} window shows it again). false ends the window's sessions, as closing its last tab does.\n"
+    "    detach_on_close: {}\n"
+    "\n"
+    "    {comment} Whether a new window shows the workspace a window left most recently. false always\n"
+    "    {comment} opens a new workspace of its own.\n"
+    "    reattach_hidden: {}\n"
+    "\n"
     "    {comment} What the daemon keeps of its workspace across a restart (a reboot, a crash, an upgrade):\n"
     "    {comment} windows, tabs, splits, each pane's directory and profile, and the tail of its "
     "scrollback.\n"
     "    {comment} `contour daemon stop` discards it, unless given --keep-snapshot.\n"
     "    restore:\n"
+    "        {comment} Whether the workspace is written and restored at all. false starts every daemon empty.\n"
+    "        enabled: {}\n"
     "        {comment} Whether a restored pane gets its scrollback back. The file may hold secrets that\n"
     "        {comment} were on screen; it is readable by your user only.\n"
     "        scrollback: {}\n"
@@ -2206,6 +2216,25 @@ constexpr StringLiteral HintScrollbackLinesWeb {
     ""
 };
 
+constexpr StringLiteral HintAlphabetConfig {
+    "\n"
+    "{comment} The characters HintMode builds its labels from, most preferred first (as Alacritty's\n"
+    "{comment} hints.alphabet). Lowercased; each character counts once; at least two are needed.\n"
+    "hint_alphabet: {}\n"
+};
+
+constexpr StringLiteral HintAlphabetWeb {
+    "The characters `HintMode` builds its labels from, most preferred first. Letters are lowercased, "
+    "each character counts once, and at least two are needed; anything less falls back to `a`-`z`.\n"
+    "\n"
+    "``` yaml\n"
+    "profiles:\n"
+    "  profile_name:\n"
+    "    hint_alphabet: aoeuidhtnsrplygmcfb\n"
+    "```\n"
+    ""
+};
+
 constexpr StringLiteral IndicatorStatusLineConfig {
     "\n"
     "{comment} Defines the colors to be used for the Indicator status line.\n"
@@ -2415,6 +2444,12 @@ constexpr StringLiteral DimColorsConfig {
     "{comment}     magenta: {}\n"
     "{comment}     cyan:    {}\n"
     "{comment}     white:   {}\n"
+    "\n"
+    "{comment} Any of the 256 indexed colors by number, 16-255 included (the 6x6x6 cube and the\n"
+    "{comment} grayscale ramp). Applied last, so it also overrides normal/bright for 0-15.\n"
+    "{comment} indexed:\n"
+    "{comment}     232: '#141115'\n"
+    "{comment}     255: '#c8cfd8'\n"
 };
 
 constexpr StringLiteral BoxArcStyleConfig {
@@ -2732,7 +2767,10 @@ constexpr StringLiteral DaemonWeb {
     "  size_policy: latest\n"
     "  default_cell_pixel_size: {{ width: 10, height: 20 }}\n"
     "  history_limit: 1000\n"
+    "  detach_on_close: true\n"
+    "  reattach_hidden: true\n"
     "  restore:\n"
+    "    enabled: true\n"
     "    scrollback: true\n"
     "    scrollback_lines: 1000\n"
     "    rerun_programs: []\n"
@@ -2756,6 +2794,12 @@ constexpr StringLiteral DaemonWeb {
     "on before any client has reported one; 10×20 is the VT340's text cell.\n"
     "- `history_limit`: Scrollback lines per session, `-1` for unlimited; "
     "unset uses the hosting profile's `history.limit`.\n"
+    "- `detach_on_close`: Whether closing a window detaches its workspace, which keeps running hidden "
+    "for a later window; `false` ends the window's sessions, as closing its last tab does.\n"
+    "- `reattach_hidden`: Whether a new window (`contour client`, `NewTerminal`) shows the workspace a "
+    "window left most recently; `false` always opens a new workspace.\n"
+    "- `restore.enabled`: Whether the workspace is written to the snapshot and restored from it at all; "
+    "`false` starts every daemon empty.\n"
     "- `restore.scrollback`: Whether a restored pane gets its scrollback back; "
     "the snapshot file may hold secrets that were on screen, and is readable by your user only.\n"
     "- `restore.scrollback_lines`: The most scrollback lines kept per pane, "
@@ -3181,6 +3225,24 @@ constexpr StringLiteral SecureInputWeb {
     "Shows a lock while the program in a pane hides what you type (a password prompt) and, on macOS, "
     "turns on Secure Keyboard Entry while that pane has focus. `auto` or `off`.\n"
     "\n"
+};
+
+constexpr StringLiteral BareWindowConfig {
+    "{comment} Whether a window without a tab strip draws no chrome at all: no title band, no\n"
+    "{comment} workspace chip, no window controls (on macOS the traffic lights are hidden too).\n"
+    "{comment} Applies while the native title bar is hidden (show_title_bar: false) and the tab\n"
+    "{comment} strip is not shown. Meant for tiling window managers.\n"
+    "bare_window: {}\n"
+    "\n"
+};
+
+constexpr StringLiteral BareWindowWeb {
+    "\n"
+    "flag, when `true`, a window whose tab strip is not shown draws no chrome at all: no title band, no "
+    "workspace chip and no window controls. On macOS the system's own traffic lights are hidden as well, "
+    "so the terminal content fills the whole window. Applies only while "
+    "[`show_title_bar`](profiles.md#show_title_bar) is `false`. Meant for tiling window managers, where "
+    "windows are moved and closed from the keyboard. The default value is `false`.\n"
 };
 
 constexpr StringLiteral WindowControlStyleWeb {
@@ -4435,6 +4497,10 @@ struct Text<WindowControlStyle>: DocumentationEntry<WindowControlStyleConfig, Wi
 {
 };
 template <>
+struct Text<BareWindow>: DocumentationEntry<BareWindowConfig, BareWindowWeb>
+{
+};
+template <>
 struct Text<UiFontFamily>: DocumentationEntry<UiFontFamilyConfig, UiFontFamilyWeb>
 {
 };
@@ -4627,6 +4693,52 @@ constexpr StringLiteral CursorMotionAnimationDurationWeb {
 template <>
 struct Text<CursorMotionAnimationDuration>:
     DocumentationEntry<CursorMotionAnimationDurationConfig, CursorMotionAnimationDurationWeb>
+{
+};
+
+constexpr StringLiteral CursorTrailConfig {
+    "{comment} Draws a fading trail behind the cursor while it moves (like kitty's cursor_trail).\n"
+    "{comment} Needs cursor_motion_animation_duration > 0.\n"
+    "cursor_trail: {}\n"
+    "\n"
+};
+
+constexpr StringLiteral CursorTrailWeb {
+    "Draws a fading trail behind the cursor while its motion animation runs.\n"
+    "\n"
+    "```yaml\n"
+    "profiles:\n"
+    "  profile_name:\n"
+    "    cursor_trail: true\n"
+    "```\n"
+    "\n"
+};
+
+template <>
+struct Text<CursorTrail>: DocumentationEntry<CursorTrailConfig, CursorTrailWeb>
+{
+};
+
+constexpr StringLiteral CursorMotionThresholdConfig {
+    "{comment} The fewest cells a cursor move must cover to animate; shorter moves (typing) jump.\n"
+    "cursor_motion_threshold: {}\n"
+    "\n"
+};
+
+constexpr StringLiteral CursorMotionThresholdWeb {
+    "The fewest cells (the larger of the line and column distance) a cursor move must cover to be\n"
+    "animated. Shorter moves, such as typing, jump at once.\n"
+    "\n"
+    "```yaml\n"
+    "profiles:\n"
+    "  profile_name:\n"
+    "    cursor_motion_threshold: 2\n"
+    "```\n"
+    "\n"
+};
+
+template <>
+struct Text<CursorMotionThreshold>: DocumentationEntry<CursorMotionThresholdConfig, CursorMotionThresholdWeb>
 {
 };
 
@@ -4907,6 +5019,10 @@ struct Text<Extensions>: DocumentationEntry<ExtensionsConfig, ExtensionsWeb, "ex
 };
 template <>
 struct Text<HintScrollbackLines>: DocumentationEntry<HintScrollbackLinesConfig, HintScrollbackLinesWeb>
+{
+};
+template <>
+struct Text<HintAlphabet>: DocumentationEntry<HintAlphabetConfig, HintAlphabetWeb>
 {
 };
 template <>

@@ -613,6 +613,21 @@ void NativeSession::sessionSignal(SessionId session, SessionSignal const& signal
 {
     if (_phase != ConnectionPhase::Viewing || _closed)
         return;
+    // A font request goes to every window showing the pane; each applies it under its own permission.
+    if (auto const* font = std::get_if<FontChangeSignal>(&signal))
+    {
+        if (_negotiated && mirrorsSession(session))
+            emitSessionEvent(proto::SessionFont {
+                .session = session.value,
+                .sizeCenti = static_cast<uint64_t>(std::max(0.0, font->font.size) * 100.0 + 0.5),
+                .regular = font->font.regular,
+                .bold = font->font.bold,
+                .italic = font->font.italic,
+                .boldItalic = font->font.boldItalic,
+                .emoji = font->font.emoji,
+                .reset = font->font.reset });
+        return;
+    }
     if (std::holds_alternative<ProgramStatusChangedSignal>(signal))
     {
         if (!mirrorsProgramStatus())

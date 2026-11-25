@@ -180,6 +180,9 @@ class Shaper
 
     [[nodiscard]] virtual std::optional<GlyphPosition> shape(FontKey font, char32_t codepoint) = 0;
 
+    /// Whether @p font's own face (no fallback) has a glyph for @p codepoint. Cheap: no font is loaded.
+    [[nodiscard]] virtual bool hasGlyph(FontKey /*font*/, char32_t /*codepoint*/) const { return false; }
+
     /**
      * Rasterizes (renders) the glyph using the given render mode.
      *

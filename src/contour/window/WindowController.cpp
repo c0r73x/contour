@@ -2321,8 +2321,11 @@ void WindowController::closeWindow()
     // session::SessionEnd::Detach: closing a WINDOW is not ending its sessions. That only differs for a
     // session this process does not own — in attach mode the daemon keeps them running and the next
     // `contour client` shows them again, which is the whole point of daemon mode. Ending one is the
-    // ClosePane/CloseTab action, not this.
-    _manager.terminate(doomed, session::SessionEnd::Detach);
+    // ClosePane/CloseTab action, not this -- unless `daemon.detach_on_close` is off, which makes closing a
+    // window end its sessions upstream too (SessionEnd::Destroy), the way closing its last tab would.
+    _manager.terminate(doomed,
+                       _manager.app().config().daemon.value().detachOnClose ? session::SessionEnd::Detach
+                                                                            : session::SessionEnd::Destroy);
 
     // Close the OS window itself. When the user clicked the close button, the QQuickWindow is already
     // closing and this is a harmless no-op; when we got here programmatically (an emptied window after a
@@ -2460,7 +2463,7 @@ void WindowController::setTitleBarVisible(bool visible)
         auto const framelessByRole = (roleFlags() & Qt::FramelessWindowHint) != 0;
         _osWindow->setFlag(Qt::FramelessWindowHint,
                            framelessByRole || policy.framelessHint == platform::FramelessHint::Apply);
-        _nativeFrame->apply(*_osWindow, target);
+        applyNativeFrame(target);
     }
 
     if (_titleBarVisible == visible)
@@ -2892,8 +2895,23 @@ QString WindowController::toastHost(QString const& band,
                                                                             : PaneFooter::Hidden));
 }
 
+bool WindowController::bareWindow() const noexcept
+{
+    return _manager.app().config().bareWindow.value();
+}
+
+void WindowController::applyNativeFrame(platform::WindowDecoration decoration)
+{
+    _osWindow->setProperty(platform::BareWindowKey, bareWindow());
+    _nativeFrame->apply(*_osWindow, decoration);
+}
+
 TitleBand WindowController::titleBand() const
 {
+    // bare_window: with no tab strip to show there is nothing for a band to carry once the window controls
+    // are gone too, so there is no band -- and with it no title, breadcrumb or location chip.
+    if (bareWindow() && !tabBarShouldShow())
+        return TitleBand {};
     auto const& app = _manager.app();
     return app.titleBandOf(TitleBandInputs {
         .frame = _titleBarVisible ? WindowFrame::NativeFrame : WindowFrame::ClientBand,
@@ -3132,7 +3150,7 @@ void WindowController::restoreWindowPosition()
             _osWindow->setPosition(reachableWindowPosition(
                 _initialPosition->position, _osWindow->size(), screen->availableGeometry()));
     _osWindow->create();
-    _nativeFrame->apply(*_osWindow, decoration());
+    applyNativeFrame(decoration());
     if (auto* screen = _osWindow->screen())
     {
         auto const available = screen->availableGeometry();
@@ -3244,7 +3262,7 @@ bool WindowController::eventFilter(QObject* watched, QEvent* event)
                 // cheap to repeat, and both NEED this: the frame adapter refuses to realize a window
                 // that has no handle yet (it must not disturb the pre-show sizing), and the shadow
                 // attachment has to be rebuilt whenever the platform window was recreated.
-                _nativeFrame->apply(*_osWindow, decoration());
+                applyNativeFrame(decoration());
                 if (_osWindow->windowState() == Qt::WindowNoState)
                 {
                     if (_initialPosition)
@@ -3276,7 +3294,7 @@ bool WindowController::eventFilter(QObject* watched, QEvent* event)
                 // on an OSC 11 that crosses the light/dark threshold, and the OS's own theme switch
                 // regenerates it -- so the frame re-reads the scheme it tints the OS border for. Cheap:
                 // the adapter only touches what the new scheme actually changed.
-                _nativeFrame->apply(*_osWindow, decoration());
+                applyNativeFrame(decoration());
                 // The band's appearance follows the scheme the palette now carries.
                 refreshTitleBand();
                 break;

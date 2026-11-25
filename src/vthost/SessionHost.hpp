@@ -185,6 +185,13 @@ struct TitleChangedSignal
     std::string title; ///< The new title, as the application wrote it.
 };
 
+/// The application asked for other fonts (OSC 50 / OSC 60). The daemon draws nothing, so it hands the request
+/// to the clients showing the session, which decide it under their own change_font permission.
+struct FontChangeSignal
+{
+    vtbackend::FontDef font; ///< As the sequence stated it.
+};
+
 /// The directory a pane is shown in moved (@see SessionHost::shownWorkingDirectoryOf). Raised by the terminal
 /// as the shell reports one (OSC 7) or enters a context (OSC 3008), and polled from the process where neither
 /// reports; the host tells its subscribers only when the directory shown differs from the one told before.
@@ -238,7 +245,8 @@ using SessionSignal = std::variant<CommandBlockFinishedSignal,
                                    CommandBlockChangedSignal,
                                    TitleChangedSignal,
                                    WorkingDirectoryChangedSignal,
-                                   ProgramStatusChangedSignal>;
+                                   ProgramStatusChangedSignal,
+                                   FontChangeSignal>;
 
 /// What a hosted session hands a SessionSignal on through. Invoked on the PARSER thread with the terminal's
 /// state mutex held: it must neither block nor read terminal state (the host posts it to the loop).
@@ -758,6 +766,7 @@ class HostedSession
         {
             raise(TitleChangedSignal { .title = std::string { title } });
         }
+        void setFontDef(vtbackend::FontDef const& font) override { raise(FontChangeSignal { .font = font }); }
         void workingDirectoryChanged() override { raise(WorkingDirectoryChangedSignal {}); }
         // Entering or leaving an OSC 3008 context may move the directory shown, which prefers the context's.
         void contextChanged(vtbackend::ContextId /*activeContext*/) override
@@ -2457,6 +2466,13 @@ class SessionHost final: public vtworkspace::ModelEvents
     [[nodiscard]] std::optional<vtpty::PageSize> refinedSize(PaneRefinements const& refinements) const;
     /// @return Whether any attached client reported the resolved `_pageSize` as its area.
     [[nodiscard]] bool anyClientDisplaysPageSize() const;
+
+    /// The area @p workspace's panes are projected into: the clients showing it, resolved under the size
+    /// policy; `_pageSize` when no client shows it. Per workspace, so a window opening or resizing never
+    /// reflows the panes another window shows.
+    [[nodiscard]] vtpty::PageSize areaOfWorkspace(uint64_t workspace) const;
+    /// areaOfWorkspace() for the workspace holding @p tab.
+    [[nodiscard]] vtpty::PageSize areaOfTab(vtworkspace::Tab const& tab) const;
     /// @param client A reporting client.
     /// @return Whether @p client displays the resolved area (`_pageSize`): only such a client measured its
     ///         panes, and sized its cells, for the grid the terminals hold.

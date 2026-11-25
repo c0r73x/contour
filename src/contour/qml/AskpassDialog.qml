@@ -172,7 +172,7 @@ KitDialog {
                 text: root.prompt.text !== undefined ? root.prompt.text : ""
                 textFormat: TextEdit.PlainText
                 wrapMode: TextEdit.WrapAnywhere
-                font: Qt.font({ family: "monospace", pixelSize: chromeStyle.type.footnote.pixelSize })
+                font: Qt.font({ family: (Qt.platform.os === "osx" ? "Menlo" : "monospace"), pixelSize: chromeStyle.type.footnote.pixelSize })
                 color: sys.windowText
                 Accessible.role: Accessible.StaticText
                 Accessible.name: qsTr("What is asked")

@@ -1167,6 +1167,8 @@ vtbackend::Settings sessionSettings(Config const& config,
     settings.screenTransitionStyle = profile.screenTransitionStyle.value();
     settings.screenTransitionDuration = profile.screenTransitionDuration.value();
     settings.cursorMotionAnimationDuration = profile.cursorMotionAnimationDuration.value();
+    settings.cursorTrail = profile.cursorTrail.value();
+    settings.cursorMotionThreshold = std::max(0, profile.cursorMotionThreshold.value());
     settings.smoothLineScrolling = profile.smoothLineScrolling.value();
     settings.smoothScrolling = profile.smoothScrolling.value();
     settings.momentumScrolling = profile.momentumScrolling.value();
@@ -1977,6 +1979,7 @@ void YAMLConfigReader::load(Config& c)
         loadFromEntry("theme", c.theme);
         loadFromEntry("ui_style", c.uiStyle);
         loadFromEntry("window_control_style", c.windowControlStyle);
+        loadFromEntry("bare_window", c.bareWindow);
         loadFromEntry("chrome_density", c.chromeDensity);
         loadFromEntry("secure_input", c.secureInput);
         loadFromEntry("ui_font_family", c.uiFontFamily);
@@ -2226,6 +2229,8 @@ void YAMLConfigReader::loadProfileBody(YAML::Node const& child,
         loadFromEntry(child, "screen_transition", where.screenTransitionStyle);
         loadFromEntry(child, "screen_transition_duration", where.screenTransitionDuration);
         loadFromEntry(child, "cursor_motion_animation_duration", where.cursorMotionAnimationDuration);
+        loadFromEntry(child, "cursor_trail", where.cursorTrail);
+        loadFromEntry(child, "cursor_motion_threshold", where.cursorMotionThreshold);
         // Maps that are no config entries of their own, each guarded on its own: a value of the wrong
         // shape costs that key, not the whole profile.
         loadGuarded(child, "cursor", where.modeInsert.value().cursor);
@@ -2261,6 +2266,18 @@ void YAMLConfigReader::loadProfileBody(YAML::Node const& child,
                  vtbackend::LinkPatterns::compile(linkPatternSpecs(where)).diagnostics())
                 errorLog()("Profile '{}': {}", profileName, diagnostic.message());
         loadFromEntry(child, "hint_scrollback_lines", where.hintScrollbackLines);
+        loadFromEntry(child, "hint_alphabet", where.hintAlphabet);
+        if (child["hint_alphabet"])
+        {
+            auto const normalized = vtbackend::normalizeHintAlphabet(where.hintAlphabet.value());
+            if (normalized != where.hintAlphabet.value())
+                errorLog()("Profile '{}': hint_alphabet '{}' is used as '{}' (lowercase, printable, "
+                           "each character once, at least two).",
+                           profileName,
+                           where.hintAlphabet.value(),
+                           normalized);
+            where.hintAlphabet = normalized;
+        }
     }
 }
 
@@ -2708,6 +2725,33 @@ void YAMLConfigReader::loadFromEntry(YAML::Node const& node,
         for (unsigned i = 0; i < 8; ++i)
             colors[256 + i] = colors[i] * 0.5f;
     }
+
+    // Any of the 256 indexed colors by number (`232: '#141115'`), the way Alacritty's
+    // `colors.indexed_colors` sets 16-255. Last, so an entry for 0-15 overrides the named maps.
+    logger()("*** loading indexed colors");
+    readGuarded(node, "indexed", colors, [&]() {
+        auto const indexed = node["indexed"];
+        if (!indexed || !indexed.IsMap())
+            return;
+        for (auto const& entry: indexed)
+        {
+            auto const index = entry.first.as<unsigned>();
+            if (index > 255)
+            {
+                errorLog()("Color scheme: indexed color {} is out of range (0-255); ignoring it.", index);
+                continue;
+            }
+            auto const value = entry.second.as<std::string>();
+            if (!value.empty() && value[0] == '#')
+                colors[index] = value;
+            else if (value.size() > 2 && value[0] == '0' && value[1] == 'x')
+                colors[index] = vtbackend::RGBColor { entry.second.as<uint32_t>() };
+            else
+                errorLog()("Color scheme: indexed color {} '{}' is not '#rrggbb' or 0xrrggbb; ignoring it.",
+                           index,
+                           value);
+        }
+    });
     logger()("*** color palette is loaded");
 }
 
@@ -3356,6 +3400,8 @@ void YAMLConfigReader::loadFromEntry(YAML::Node const& node, std::string const& 
         where.historyLimit = value;
     }
 
+    loadGuarded(child, "detach_on_close", where.detachOnClose);
+    loadGuarded(child, "reattach_hidden", where.reattachHidden);
     loadFromEntry(child, "restore", where.restore);
 
     if (auto const keeper = child["keeper"]; keeper && keeper.IsMap())
@@ -4421,6 +4467,7 @@ void YAMLConfigReader::loadFromEntry(YAML::Node const& node,
     if (!child)
         return;
 
+    loadGuarded(child, "enabled", where.enabled);
     loadGuarded(child, "scrollback", where.scrollback);
 
     if (auto const lines = child["scrollback_lines"])

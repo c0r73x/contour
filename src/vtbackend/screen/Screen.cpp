@@ -4640,6 +4640,11 @@ namespace impl
                                fonts.boldItalic,
                                fonts.emoji);
             }
+            else if (param(0) == "reset"sv)
+            {
+                // [write] OSC 60 ; reset ST -- the profile's configured fonts again.
+                terminal.setFontDef(FontDef { .size = 0.0, .reset = true });
+            }
             else
             {
                 auto const size = double(toInt(param(0))) / 100.0;
