@@ -24,7 +24,7 @@ Item {
     /// The last lines the pane shows, oldest first (TerminalSession.visibleTextTail).
     property var lines: []
     /// The family the lines are set in: the pane's own.
-    property string lineFamily: "monospace"
+    property string lineFamily: (Qt.platform.os === "osx" ? "Menlo" : "monospace")
     /// The card's width; its height follows from the header and the lines.
     property real cardWidth: 190
     /// The share of the scene the card lets through, so what lies beneath still reads.

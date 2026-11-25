@@ -80,7 +80,7 @@ Rectangle {
             visible: root.badge.length > 0
             text: root.badge
             color: chromeStyle.colors.controlText
-            font: Qt.font({ family: "monospace", pixelSize: chromeStyle.type.footnote.pixelSize })
+            font: Qt.font({ family: (Qt.platform.os === "osx" ? "Menlo" : "monospace"), pixelSize: chromeStyle.type.footnote.pixelSize })
         }
 
         // A real button, so it is keyboard reachable and owns its own hit area rather than being a

@@ -811,24 +811,45 @@ ThemedWindow
     // question about a host key, or a note that a key awaits a touch. One at a time, the next shown once this
     // one is answered; an answer names the prompt it answers, so a late or doubled answer reaches nothing.
     // `!== undefined` for a lightweight mock `win` without a host.
-    AskpassDialog {
-        id: askpassDialog
-        prompt: ({})
-        // The terminal gets the keyboard back once the prompt is gone, as PermissionDialog does.
-        focusTarget: paneContentLoader.item
+    // Built on the first prompt, not with the window: its TextArea costs ~100ms of font lookup at spawn.
+    // Once built it stays, so later prompts and dismissals behave exactly as before.
+    Loader {
+        id: askpassLoader
+        anchors.fill: parent
         readonly property var host: appWindow.win && appWindow.win.promptHost !== undefined
                                     ? appWindow.win.promptHost : null
-        onAnswered: (promptId, outcome, answer) => {
-            if (host !== null)
-                host.answerPrompt(promptId, outcome, answer)
+        function hasPrompt() {
+            const prompt = host !== null ? host.pendingPrompt : null;
+            return prompt !== null && prompt !== undefined && Object.keys(prompt).length > 0;
         }
-        onHostChanged: askpassDialog.present(host !== null ? host.pendingPrompt : ({}))
+        active: false
+        onHostChanged: {
+            if (hasPrompt()) active = true;
+            else if (item) item.present(({}));
+        }
+        sourceComponent: AskpassDialog {
+            id: askpassDialog
+            prompt: ({})
+            // The terminal gets the keyboard back once the prompt is gone, as PermissionDialog does.
+            focusTarget: paneContentLoader.item
+            onAnswered: (promptId, outcome, answer) => {
+                if (askpassLoader.host !== null)
+                    askpassLoader.host.answerPrompt(promptId, outcome, answer)
+            }
+            Component.onCompleted: askpassDialog.present(askpassLoader.host !== null
+                                                         ? askpassLoader.host.pendingPrompt : ({}))
+        }
     }
 
     Connections {
-        target: askpassDialog.host
+        target: askpassLoader.host
         ignoreUnknownSignals: true
-        function onPendingPromptChanged() { askpassDialog.present(askpassDialog.host.pendingPrompt) }
+        function onPendingPromptChanged() {
+            if (askpassLoader.item)
+                askpassLoader.item.present(askpassLoader.host.pendingPrompt)
+            else if (askpassLoader.hasPrompt())
+                askpassLoader.active = true
+        }
     }
 
     Connections {

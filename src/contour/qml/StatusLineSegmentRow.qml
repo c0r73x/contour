@@ -118,7 +118,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.bottomMargin: chromeStyle.space.s2
             enabled: root.editable
-            font: Qt.font({ family: "monospace", pixelSize: chromeStyle.type.body.pixelSize })
+            font: Qt.font({ family: (Qt.platform.os === "osx" ? "Menlo" : "monospace"), pixelSize: chromeStyle.type.body.pixelSize })
             selectByMouse: true
             text: root.rawTemplate
             // Committed on commit rather than per keystroke, so a half-typed placeholder is not parsed and
@@ -171,7 +171,7 @@ Rectangle {
                         Label {
                             text: modelData.sample
                             color: chromeStyle.colors.settingsHelp
-                            font: Qt.font({ family: "monospace", pixelSize: chromeStyle.type.footnote.pixelSize })
+                            font: Qt.font({ family: (Qt.platform.os === "osx" ? "Menlo" : "monospace"), pixelSize: chromeStyle.type.footnote.pixelSize })
                             elide: Text.ElideRight
                             Layout.maximumWidth: chromeStyle.settings.sidebarWidth
                         }

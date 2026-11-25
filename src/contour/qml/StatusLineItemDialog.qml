@@ -191,7 +191,7 @@ Popup {
             Label {
                 text: "{" + root.itemType + "}"
                 color: chromeStyle.colors.settingsHelp
-                font: Qt.font({ family: "monospace", pixelSize: chromeStyle.type.footnote.pixelSize })
+                font: Qt.font({ family: (Qt.platform.os === "osx" ? "Menlo" : "monospace"), pixelSize: chromeStyle.type.footnote.pixelSize })
             }
         }
 

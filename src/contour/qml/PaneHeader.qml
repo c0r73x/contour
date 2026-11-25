@@ -167,7 +167,7 @@ Item {
         background: header.background
         mark: chromeStyle.paletteRevision < 0 ? "transparent" : chromeStyle.accentColor
         ink: header.dimmedText
-        lineFamily: header.session && header.session.fontFamily ? header.session.fontFamily : "monospace"
+        lineFamily: header.session && header.session.fontFamily ? header.session.fontFamily : (Qt.platform.os === "osx" ? "Menlo" : "monospace")
     }
 
     // The drag's carrier; the pane itself stays put, and the OS cursor shows the card.
