@@ -4405,6 +4405,13 @@ class Terminal: public IStatusLinePublishTarget
         _savedStatusDisplayType = value;
     }
 
+    /// Shows @p type, which a host's control chose (RIS, DECSSDT, the frontend's grant of the host-writable
+    /// status line DECSSDT asked for, or a remote pane's host) -- unless a notice is up (pushStatusDisplay),
+    /// which the host may not take down: then @p type is what comes back once the last notice is down. DEC
+    /// STD 070 ch. 14 §2.1.1: "The host may not directly program or affect the Error Line".
+    /// @param type The type the host chose.
+    void showStatusDisplayOfHost(StatusDisplayType type);
+
     // {{{ Sixel image configuration
     void setMaxSixelColorRegisters(unsigned value) noexcept { _maxSixelColorRegisters = value; }
     [[nodiscard]] unsigned maxSixelColorRegisters() const noexcept { return _maxSixelColorRegisters; }
@@ -4528,13 +4535,6 @@ class Terminal: public IStatusLinePublishTarget
     /// Reacts to a finished status-line command run; called from an executor thread.
     /// @param output Whether the displayed text changed.
     void onStatusLineCommandCompleted(StatusLineCommandOutput output);
-
-    /// Shows @p type, which a host's control chose (RIS, DECSSDT, or the frontend's grant of the
-    /// host-writable status line DECSSDT asked for) -- unless a notice is up (pushStatusDisplay), which the
-    /// host may not take down: then @p type is what comes back once the last notice is down. DEC STD 070
-    /// ch. 14 §2.1.1: "The host may not directly program or affect the Error Line".
-    /// @param type The type the host chose.
-    void showStatusDisplayOfHost(StatusDisplayType type);
 
     /// Puts @p page on display, and brings the viewport, the window onto it, back inside its history.
     ///

@@ -5963,6 +5963,55 @@ TEST_CASE("a vi mark on a remote pane stays on its row when the pane is resized"
     CHECK(ticks == 1);
 }
 
+TEST_CASE("vi mode on a remote pane stays on the prompt across the resize its status line asks of the host",
+          "[vthost][mirror][vi]")
+{
+    // Vi mode shows the indicator status line, which takes a line from the page: a remote pane's page
+    // shrinks here, the frontend asks the host for the smaller size, and the host's answer replays the
+    // page. With output longer than the page, the view and vi's cursor must come out of that on the
+    // prompt they went in on.
+    auto h = MirrorHarness {};
+    auto const session = newSession(h.host);
+    h.serverTerminal(session)->writeToScreen(numberedRows(60) + "prompt>");
+
+    auto offsets = std::vector<int> {};
+    auto cursorRow = std::string {};
+    auto selectedFrom = std::string {};
+    auto scenario = [](MirrorHarness* h,
+                       vtworkspace::SessionId session,
+                       std::vector<int>* offsets,
+                       std::string* cursorRow,
+                       std::string* selectedFrom) -> Task<void> {
+        co_await waitUntil(&h->loop, mirrorShows(h, "prompt>"));
+        h->mirror->inputHandler().setMode(vtbackend::ViMode::Normal);
+        offsets->push_back(unbox<int>(h->mirror->viewport().scrollOffset()));
+
+        // What ChannelPty does with the resize the status line made.
+        auto const page = h->mirror->pageSize();
+        h->client->requestResize(unbox<uint32_t>(page.columns), unbox<uint32_t>(page.lines), std::nullopt);
+        co_await waitUntil(&h->loop, [h, session, page] {
+            return h->serverTerminal(session)->pageSize() == page
+                   && vthost::testing::compareGrids(
+                          *h->serverTerminal(session), *h->mirror, vthost::testing::ComparedPage::Active, 1)
+                          .empty();
+        });
+        offsets->push_back(unbox<int>(h->mirror->viewport().scrollOffset()));
+
+        pressKeys(*h->mirror, "v");
+        offsets->push_back(unbox<int>(h->mirror->viewport().scrollOffset()));
+        auto const& grid = h->mirror->primaryScreen().grid();
+        *cursorRow = vtbackend::test::trimRight(grid.lineText(h->mirror->normalModeCursorPosition().line));
+        if (auto const* selection = h->mirror->selector())
+            *selectedFrom = vtbackend::test::trimRight(grid.lineText(selection->from().line));
+        h->client->detach();
+    }(&h, session, &offsets, &cursorRow, &selectedFrom);
+    h.loop.blockOn(drive(&h, std::move(scenario)));
+
+    CHECK(offsets == std::vector<int> { 0, 0, 0 });
+    CHECK(cursorRow == "prompt>");
+    CHECK(selectedFrom == "prompt>");
+}
+
 // ---------------------------------------------------------------------------------------------
 // Two clients of one host: a vi mark is the session's, wherever it was set.
 // ---------------------------------------------------------------------------------------------

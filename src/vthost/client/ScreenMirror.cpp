@@ -833,10 +833,16 @@ void ScreenMirror::applyStatusDisplay(uint8_t wireType, uint8_t wireActive)
     // core::unreachable() — undefined behaviour in this process. A value no enumerator has is
     // treated as "the session says nothing", which leaves this terminal's own configuration
     // standing. @see vthost/StatusWire.h.
+    //
+    // Shown as the host's choice, never over a notice this terminal put up: vi mode's indicator is the
+    // viewer's own, and a host's None replayed while it is up -- the replay of the very resize the indicator
+    // asked for -- took it down with vi mode still on. The page grew back by the line under the vi cursor,
+    // which then named the row above the prompt, and asked the host to resize once more. What is compared
+    // is what shows once the notices are down: the type saved under them, or the one shown when none is up.
     auto const asked = statusDisplayTypeOf(wireType).value_or(vtbackend::StatusDisplayType::None);
     auto const want = std::max(asked, _ownStatusDisplayType);
-    if (_terminal->statusDisplayType() != want)
-        _terminal->setStatusDisplay(want);
+    if (_terminal->savedStatusDisplayType().value_or(_terminal->statusDisplayType()) != want)
+        _terminal->showStatusDisplayOfHost(want);
     if (auto const active = activeStatusDisplayOf(wireActive);
         active.has_value() && _terminal->activeStatusDisplay() != *active)
         _terminal->setActiveStatusDisplay(*active);
