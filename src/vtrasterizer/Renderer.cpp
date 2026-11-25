@@ -770,7 +770,6 @@ bool Renderer::renderImpl(vtbackend::Terminal& terminal, bool pressure)
     terminal.refreshRenderBuffer();
 #endif // }}}
 
-    auto const smoothPixelOffset = static_cast<int>(terminal.smoothScrollPixelOffset());
     auto const statusDisplayAtTop =
         terminal.settings().statusDisplayPosition == vtbackend::StatusDisplayPosition::Top;
     // The main page as the fill laid it out, read race-free once: the PTY's page size is rewritten by a
@@ -848,16 +847,25 @@ bool Renderer::renderImpl(vtbackend::Terminal& terminal, bool pressure)
         });
     };
 
-    if (smoothPixelOffset == 0)
+    // Held for the whole frame, so every step draws from the one buffer -- the header from the very buffer
+    // the cells came from, the shift from the fill that laid those cells out. Holding the front buffer's lock
+    // across execute() blocks no one: the terminal thread only try_locks it to swap, and a failed swap leaves
+    // the frame in the back buffer to be swapped in later -- the cost is a few more failed swaps, never a
+    // wait or an inversion. Taken after the refresh above, which swaps under that very lock.
+    vtbackend::RenderBufferRef const renderBuffer = terminal.renderBuffer();
+    auto const& buffer = renderBuffer.get();
+
+    // The buffer's offset, not the terminal's live one: the rows hold the extra line above the page only
+    // while it is non-zero, and only the scissored path keeps that line out of the top margin. Decided on
+    // the offset itself rather than on the whole-pixel shift, as a sub-pixel offset truncates to no shift
+    // while its rows still hold the extra line.
+    auto const smoothScrolling = buffer.smoothScrollPixelOffset != 0.0f;
+    auto const smoothPixelOffset = static_cast<int>(buffer.smoothScrollPixelOffset);
+
+    if (!smoothScrolling)
     {
         // --- Single-pass rendering: no smooth scroll offset, no scissor needed ---
         setSmoothScrollOffset(0);
-        // Held across both steps, so the header comes from the very buffer the cells did. Holding the front
-        // buffer's lock across the page step's execute() blocks no one: the terminal thread only try_locks it
-        // to swap, and a failed swap leaves the frame in the back buffer to be swapped in later -- the cost
-        // is a few more failed swaps, never a wait or an inversion.
-        vtbackend::RenderBufferRef const renderBuffer = terminal.renderBuffer();
-        auto const& buffer = renderBuffer.get();
         cursorOpt = buffer.cursor;
 
         // One pass, unless the status line is drawn left of the page's columns: then a pass of its own.
@@ -892,21 +900,20 @@ bool Renderer::renderImpl(vtbackend::Terminal& terminal, bool pressure)
 
         // Pass 1: Main display content (with smooth scroll offset, scissored).
         setSmoothScrollOffset(smoothPixelOffset);
-        vtbackend::RenderBufferRef const renderBuffer = terminal.renderBuffer();
-        cursorOpt = renderBuffer.get().cursor;
-        auto const split = splitStatus(renderBuffer.get());
+        cursorOpt = buffer.cursor;
+        auto const split = splitStatus(buffer);
 
         renderPass(primaryPressure, [&] {
-            renderCells(split.mainCells, renderBuffer.get().softGlyphs, smoothPixelOffset);
-            renderLineFlash(renderBuffer.get().lineFlash, mainPageSize.columns, smoothPixelOffset);
-            renderBlockHighlight(renderBuffer.get().blockHighlight, mainPageSize.columns, smoothPixelOffset);
+            renderCells(split.mainCells, buffer.softGlyphs, smoothPixelOffset);
+            renderLineFlash(buffer.lineFlash, mainPageSize.columns, smoothPixelOffset);
+            renderBlockHighlight(buffer.blockHighlight, mainPageSize.columns, smoothPixelOffset);
             renderLines(split.mainLines);
             // The gutter and the annotations belong to the main display, and scroll with it.
-            renderChipBands(std::span(renderBuffer.get().chipBands), smoothPixelOffset);
-            renderAnnotations(std::span(renderBuffer.get().annotations));
-            renderChips(std::span(renderBuffer.get().chips), smoothPixelOffset);
+            renderChipBands(std::span(buffer.chipBands), smoothPixelOffset);
+            renderAnnotations(std::span(buffer.annotations));
+            renderChips(std::span(buffer.chips), smoothPixelOffset);
         });
-        renderGutter(std::span(renderBuffer.get().gutter), smoothPixelOffset);
+        renderGutter(std::span(buffer.gutter), smoothPixelOffset);
 
         // Scissor clips the main display area so the offset content doesn't bleed into the status line.
         {
@@ -924,14 +931,14 @@ bool Renderer::renderImpl(vtbackend::Terminal& terminal, bool pressure)
         }
 
         // The scissored step has flushed the page, and the header is not clipped with the content under it.
-        if (auto const* const header = inGridStickyHeader(renderBuffer.get()))
+        if (auto const* const header = inGridStickyHeader(buffer))
             renderStickyHeaderStep(*header);
 
         // Pass 2: Status line (no scroll offset, no scissor), its bar ahead of its rows.
         setSmoothScrollOffset(0);
-        if (auto const& bar = renderBuffer.get().statusBar)
+        if (auto const& bar = buffer.statusBar)
             renderPass(false, [&] { renderStatusBar(*bar); });
-        renderStatusRows(renderBuffer.get(), split);
+        renderStatusRows(buffer, split);
     }
 
     _lastDrawnCursorColumn.store(cursorOpt && cursorOpt->display == vtbackend::RenderedDisplay::Main

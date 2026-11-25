@@ -339,6 +339,15 @@ struct RenderBuffer
     /// The hovered block's tint and ring on a native row; absent while no block is hovered.
     std::optional<RenderBlockHighlight> blockHighlight {};
 
+    /// The sub-cell smooth-scroll offset, in pixels, that @ref cells were laid out for. They hold the extra
+    /// row above the page, which the shift partly reveals, only while it is non-zero.
+    ///
+    /// Taken with the rows rather than read from the terminal when drawing, because the live offset moves on
+    /// the GUI thread between a fill and the frame that draws it, and a frame that missed a swap draws an
+    /// older fill still. Paired with the wrong buffer, a zero offset draws that extra row unshifted and
+    /// unclipped, a whole row up in the top margin.
+    float smoothScrollPixelOffset = 0.0f;
+
     uint64_t frameID {};
 
     /// Starts this frame's sticky header on the storage the last one left behind, so a header shown frame
@@ -365,6 +374,7 @@ struct RenderBuffer
         cursor.reset();
         lineFlash.reset();
         blockHighlight.reset();
+        smoothScrollPixelOffset = 0.0f;
         if (stickyHeader)
         {
             _retiredStickyHeader = std::move(*stickyHeader);

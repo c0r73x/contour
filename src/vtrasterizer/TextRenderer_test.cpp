@@ -2417,6 +2417,56 @@ TEST_CASE("Renderer.stickyHeader.staysPutWhileThePageScrollsSmoothly", "[rendere
     CHECK(prompt->y == 0);
 }
 
+TEST_CASE("Renderer.smoothScroll.theRowAboveThePageIsClippedAtItsTopEdge", "[renderer][smoothscroll]")
+{
+    // A part-row offset puts the row above the page into the frame, to fill the strip the shift opens at
+    // the top. However little of it shows, the rest is scissored away at the page's top edge -- an offset
+    // under a pixel shifts nothing, and is still one -- and so is it in a frame drawing a fill whose
+    // offset the terminal has moved on from since.
+    configureMockFont();
+    ReconfigFixture fixture;
+    fixture.attachRenderTarget();
+    // Exactly the page's 5 rows of 20 columns, 10x20 pixels each, with no margin: its top edge is y 0.
+    fixture.renderTarget.setRenderSize(vtbackend::ImageSize { Width(200), Height(100) });
+
+    auto mc = vtbackend::MockTerm { PageSize { LineCount(5), ColumnCount(20) }, LineCount(100) };
+    // A coloured background on every row, so the row above the page paints a rectangle of its own.
+    for (auto const i: std::views::iota(0, 20))
+        mc.writeToScreen(std::format("\033[41mrow {}\033[m\r\n", i));
+    mc.terminal.setCellPixelSize(vtbackend::ImageSize { vtpty::Width(10), vtpty::Height(20) });
+
+    SECTION("an offset under a pixel")
+    {
+        REQUIRE(mc.terminal.applySmoothScrollPixelDelta(0.5f) == SmoothScrollResult::Applied);
+        REQUIRE(mc.terminal.smoothScrollPixelOffset() == 0.5f);
+    }
+    SECTION("an offset the terminal has dropped since the fill")
+    {
+        REQUIRE(mc.terminal.applySmoothScrollPixelDelta(5.0f) == SmoothScrollResult::Applied);
+        (void) mc.terminal.refreshRenderBuffer();
+        // Synchronized output keeps the next frame on the fill above, as a missed swap does.
+        mc.writeToScreen("\033[?2026h");
+        mc.terminal.viewport().resetPixelOffset();
+    }
+
+    (void) fixture.renderer.render(mc.terminal, /*pressureHint*/ false);
+
+    auto const red = mc.terminal.colorPalette().normalColor(1);
+    auto const& rectangles = fixture.renderTarget.rectangles;
+    auto aboveThePage =
+        rectangles | std::views::filter([&](auto const& r) { return r.color.rgb() == red && r.y < 0; });
+    REQUIRE(!std::ranges::empty(aboveThePage));
+    for (auto const& rectangle: aboveThePage)
+    {
+        REQUIRE(rectangle.scissor.has_value());
+        // Bottom-left origin: the scissor's top edge is the page's.
+        CHECK(fixture.renderTarget.renderSize().height.as<int>()
+                  - (rectangle.scissor->y + rectangle.scissor->height)
+              == 0);
+        CHECK(rectangle.scissor->height == 100);
+    }
+}
+
 namespace
 {
 /// The status bar the frame last built for @p mc's terminal describes.

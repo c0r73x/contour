@@ -1399,8 +1399,12 @@ void Terminal::fillRenderBufferInternal(RenderBuffer& output, bool includeSelect
     }();
 
     // When smooth scrolling is active with a non-zero pixel offset,
-    // render one extra line at the bottom to fill the gap caused by the sub-cell shift.
+    // render one extra line above the page to fill the gap the sub-cell shift opens at its top.
     auto const smoothScrollExtra = smoothScrollExtraLines();
+    // Recorded with the rows, under the same lock, for the renderer to shift and clip by: the live offset
+    // moves on before the frame draws them, and read as zero against rows holding that extra line, it drew
+    // the line whole into the top margin.
+    output.smoothScrollPixelOffset = smoothScrollPixelOffset();
 
     // When DECPCCM is reset and the cursor's page is not on display, its cursor is not drawn (DEC STD 070:
     // "The cursor is not shown in this case"). The vi cursor is on the page on display, and always is.

@@ -66,6 +66,28 @@ TEST_CASE("Terminal.smoothScrollExtraLines.one_when_offset_nonzero", "[terminal]
     CHECK(*terminal.smoothScrollExtraLines() == 1);
 }
 
+TEST_CASE("Terminal.smoothScrollPixelOffset.recordedWithTheRowsItShifts", "[terminal]")
+{
+    // The frame takes the offset from the fill that laid its rows out, the extra row above the page among
+    // them, and not from the viewport: that one moves on before the frame draws.
+    // With history, so that there is a row above the page to draw.
+    auto mc = MockTerm { PageSize { LineCount { 4 }, ColumnCount { 10 } }, LineCount { 10 } };
+    auto& terminal = mc.terminal;
+    for (auto const i: std::views::iota(0, 10))
+        mc.writeToScreen(std::format("line {}\r\n", i));
+    terminal.viewport().setPixelOffset(5.0f);
+    (void) terminal.refreshRenderBuffer();
+    terminal.viewport().resetPixelOffset();
+
+    auto const buffer = terminal.renderBuffer();
+    CHECK(buffer.get().smoothScrollPixelOffset == 5.0f);
+    // Plain-text rows go to `lines`, styled ones to `cells`; the extra row may be either.
+    CHECK((std::ranges::any_of(buffer.get().lines,
+                               [](auto const& line) { return line.lineOffset == LineOffset(-1); })
+           || std::ranges::any_of(buffer.get().cells,
+                                  [](auto const& cell) { return cell.position.line == LineOffset(-1); })));
+}
+
 TEST_CASE("Terminal.screenTransitionProgress.no_transition_returns_1", "[terminal]")
 {
     auto mc = MockTerm { ColumnCount { 10 }, LineCount { 4 } };

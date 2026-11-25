@@ -165,6 +165,15 @@ class MockRenderTarget: public vtrasterizer::RenderTarget
     MockAtlasBackend& getMockBackend() { return _textureScheduler; }
     MockImageTextureBackend& getMockImageBackend() { return _imageScheduler; }
 
+    /// One setScissorRect() call: bottom-left origin, as the graphics APIs take it.
+    struct RecordedScissor
+    {
+        int x = 0;      ///< Left edge, in pixels.
+        int y = 0;      ///< Bottom edge, in pixels up from the render target's bottom.
+        int width = 0;  ///< Its width, in pixels.
+        int height = 0; ///< Its height, in pixels.
+    };
+
     /// One renderRectangle() call, in the order it was issued.
     struct RecordedRectangle
     {
@@ -178,6 +187,10 @@ class MockRenderTarget: public vtrasterizer::RenderTarget
         /// all its rectangles before any of its glyphs -- so only a rectangle in a LATER step than some
         /// glyphs can cover them.
         size_t step = 0;
+
+        /// The scissor its step was executed under; absent when none was. Stamped by execute() rather than
+        /// here: the renderer stages a step's geometry first and sets the scissor just before executing it.
+        std::optional<RecordedScissor> scissor {};
     };
 
     std::vector<RecordedRectangle> rectangles; ///< Every rectangle drawn, in order.
@@ -189,16 +202,28 @@ class MockRenderTarget: public vtrasterizer::RenderTarget
         rectangles.push_back(RecordedRectangle {
             .x = x, .y = y, .width = width, .height = height, .color = color, .step = executeCount });
     }
-    void setScissorRect(int, int, int, int) override {}
-    void clearScissorRect() override {}
+    void setScissorRect(int x, int y, int width, int height) override
+    {
+        _scissor = RecordedScissor { .x = x, .y = y, .width = width, .height = height };
+    }
+    void clearScissorRect() override { _scissor.reset(); }
     void scheduleScreenshot(ScreenshotCallback) override {}
-    void execute(std::chrono::steady_clock::time_point) override { ++executeCount; }
+    void execute(std::chrono::steady_clock::time_point) override
+    {
+        auto const inThisStep = [&](RecordedRectangle const& r) {
+            return r.step == executeCount;
+        };
+        for (auto& rectangle: rectangles | std::views::filter(inThisStep))
+            rectangle.scissor = _scissor;
+        ++executeCount;
+    }
     void clearCache() override {}
     std::optional<vtrasterizer::AtlasTextureScreenshot> readAtlas() override { return std::nullopt; }
     void inspect(std::ostream&) const override {}
 
   private:
     vtbackend::ImageSize _size {};
+    std::optional<RecordedScissor> _scissor {};
     MockAtlasBackend _textureScheduler;
     MockImageTextureBackend _imageScheduler;
 };
