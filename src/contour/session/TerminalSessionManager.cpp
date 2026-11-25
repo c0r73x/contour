@@ -1243,6 +1243,14 @@ void TerminalSessionManager::closeAllTabs(TerminalSession* acting)
         controller->closeWindow();
 }
 
+void TerminalSessionManager::closeAllWindows()
+{
+    // A snapshot: each close takes its controller out of the map.
+    auto const controllers = std::ranges::to<std::vector>(_controllersByWindow | std::views::values);
+    for (auto* controller: controllers)
+        controller->closeWindow();
+}
+
 bool TerminalSessionManager::applyLayoutToWindow(
     vtworkspace::WorkspaceId window,
     config::Layout const& layout,

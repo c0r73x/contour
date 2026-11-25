@@ -5554,6 +5554,30 @@ TEST_CASE("closing an in-process window ends the sessions of all its workspaces"
     CHECK(manager.model().workspace(second) == nullptr);
 }
 
+TEST_CASE("closeAllWindows closes every window through its own teardown", "[manager][window]")
+{
+    // What Quit does with `daemon.detach_on_close` off: each window closes as its close button would, so its
+    // sessions end instead of being left behind.
+    contour::test::TestApp app { std::make_unique<contour::test::MockPtySessionFactory>() };
+    auto& manager = app.manager();
+    contour::test::ScopedControllerWithOsWindow const first { manager };
+    first->bindWindow(first.osWindow.get());
+    first->createNewTab();
+    contour::test::ScopedControllerWithOsWindow const second { manager };
+    second->bindWindow(second.osWindow.get());
+    second->createNewTab();
+    REQUIRE(sessionAtRow(manager, *first, 0) != nullptr);
+    REQUIRE(sessionAtRow(manager, *second, 0) != nullptr);
+    auto const firstId = first->windowId();
+    auto const secondId = second->windowId();
+
+    // The sessions are not looked at afterwards: with the last window gone the manager lets go of them.
+    manager.closeAllWindows();
+
+    CHECK(manager.controllerOf(firstId) == nullptr);
+    CHECK(manager.controllerOf(secondId) == nullptr);
+}
+
 TEST_CASE("seen marks are per window", "[manager][window][tabattention]")
 {
     using contour::window::PaneKey;
