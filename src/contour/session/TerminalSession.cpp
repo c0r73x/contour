@@ -8078,6 +8078,8 @@ namespace
         &vtbackend::Settings::screenTransitionStyle,
         &vtbackend::Settings::screenTransitionDuration,
         &vtbackend::Settings::cursorMotionAnimationDuration,
+        &vtbackend::Settings::cursorTrail,
+        &vtbackend::Settings::cursorMotionThreshold,
         &vtbackend::Settings::preeditStyle,
         &vtbackend::Settings::smoothLineScrolling,
         &vtbackend::Settings::smoothScrolling,
