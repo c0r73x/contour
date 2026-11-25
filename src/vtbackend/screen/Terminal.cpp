@@ -6846,9 +6846,12 @@ void Terminal::setLinkDecorationMode(LinkDecorationMode mode)
 
 FollowModifiers Terminal::followModifiers() const noexcept
 {
+    // The chord as held first, as the press looks the follow binding up: a follow gesture that names the
+    // bypass modifier itself (Shift+click) is held only with it.
     auto const& follow = _settings.linkFollowModifiers;
     return follow && *follow != Modifiers {}
-                   && bindingModifiers(_heldModifiers, _settings.mouseProtocolBypassModifiers) == *follow
+                   && (_heldModifiers == *follow
+                       || bindingModifiers(_heldModifiers, _settings.mouseProtocolBypassModifiers) == *follow)
                ? FollowModifiers::Held
                : FollowModifiers::Released;
 }

@@ -2545,6 +2545,34 @@ TEST_CASE("TerminalSession: Ctrl+click on a link follows it and starts no block 
     }
 }
 
+TEST_CASE("TerminalSession: Shift+click follows a link bound to Shift+Left",
+          "[contour][session][hyperlink][input]")
+{
+    // Shift is the mouse-protocol bypass modifier, which binding lookup takes out of the chord: a
+    // Shift+Left FollowHyperlink binding looked up as a plain click and never followed.
+    contour::test::TestApp testApp;
+    auto mappings = testApp.app().config().inputMappings.value();
+    mappings.mouseMappings.insert(mappings.mouseMappings.begin(),
+                                  contour::config::MouseInputMapping {
+                                      .modes { vtbackend::MatchModes {} },
+                                      .modifiers { Modifiers { vtbackend::Modifier::Shift } },
+                                      .input = vtbackend::MouseButton::Left,
+                                      .binding = { { contour::actions::FollowHyperlink {} } } });
+    testApp.app().config().inputMappings = std::move(mappings);
+    auto session = makeDisplaylessSession(testApp.app());
+    auto& launcher = testApp.launcher();
+    auto const origin =
+        vtbackend::CellLocation { .line = vtbackend::LineOffset(0), .column = vtbackend::ColumnOffset(0) };
+    seedHoveredHyperlink(*session, "https://contour-terminal.org/");
+
+    session->sendMousePressEvent(
+        Modifiers { vtbackend::Modifier::Shift }, vtbackend::MouseButton::Left, origin, {});
+
+    REQUIRE(launcher.openedUrls.size() == 1);
+    CHECK(launcher.openedUrls.back().toString().toStdString() == "https://contour-terminal.org/");
+    CHECK_FALSE(session->terminal().leftMouseButtonPressed());
+}
+
 TEST_CASE("TerminalSession: a file:// link in a pane replicating another machine opens nothing here",
           "[contour][session][hyperlink]")
 {

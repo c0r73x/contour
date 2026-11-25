@@ -4309,9 +4309,12 @@ void TerminalSession::sendMousePressEvent(Modifiers modifiers,
         TerminalSession const& session;
         MouseButton button;
         Modifiers modifiers;
+        Modifiers held; ///< The chord as held, before the mouse-protocol bypass modifiers are taken out.
         config::ActionList const* claimed = nullptr;
     };
-    auto claim = PressClaim { .session = *this, .button = button, .modifiers = sanitizedModifier };
+    auto claim = PressClaim {
+        .session = *this, .button = button, .modifiers = sanitizedModifier, .held = modifiers
+    };
     // Through runUnderStateLock(): a press the application tracks is reported, and with SRM reset the report
     // is echoed, which parses. See ViNormalMode.
     auto const handledByApp = _terminal.runUnderStateLock([&]() {
@@ -4321,6 +4324,10 @@ void TerminalSession::sendMousePressEvent(Modifiers modifiers,
         return _terminal.sendMousePressEvent(
             modifiers, button, pos, pixelPosition, uiHandledHint, [&claim](uint8_t clickCount) {
                 claim.claimed = claim.session.clickCountBinding(claim.button, claim.modifiers, clickCount);
+                // A follow binding naming the bypass modifier itself (Shift+click) is matched on the chord
+                // as held first: taken out, Shift+click would look up a plain click and never follow.
+                if (claim.claimed == nullptr && claim.held != claim.modifiers)
+                    claim.claimed = claim.session.linkFollowBinding(claim.button, claim.held);
                 if (claim.claimed == nullptr)
                     claim.claimed = claim.session.linkFollowBinding(claim.button, claim.modifiers);
                 return claim.claimed != nullptr ? vtbackend::MousePressClaim::Claimed
