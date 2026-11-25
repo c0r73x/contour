@@ -1542,6 +1542,13 @@ FontMetrics OpenShaper::metrics(FontKey key) const
     return fontInfo.metrics.value();
 }
 
+bool OpenShaper::hasGlyph(FontKey font, char32_t codepoint) const
+{
+    auto const fontInfo = _d->fontKeyToHbFontInfoMapping.find(font);
+    return fontInfo != _d->fontKeyToHbFontInfoMapping.end()
+           && FT_Get_Char_Index(fontInfo->second.ftFace.get(), codepoint) != 0;
+}
+
 optional<GlyphPosition> OpenShaper::shape(FontKey font, char32_t codepoint)
 {
     auto const fontInfoIterator = _d->fontKeyToHbFontInfoMapping.find(font);

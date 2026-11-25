@@ -47,6 +47,7 @@ class OpenShaper: public Shaper
                ShapeResult& result) override;
 
     [[nodiscard]] std::optional<GlyphPosition> shape(FontKey font, char32_t codepoint) override;
+    [[nodiscard]] bool hasGlyph(FontKey font, char32_t codepoint) const override;
 
     [[nodiscard]] std::optional<RasterizedGlyph> rasterize(GlyphKey glyph,
                                                            RenderMode mode,

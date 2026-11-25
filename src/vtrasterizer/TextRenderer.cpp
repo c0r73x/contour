@@ -131,6 +131,9 @@ Making use of reserved glyph slots
 
 #include <core/log/Assert.hpp>
 
+#include <libunicode/codepoint_properties.h>
+#include <libunicode/emoji_segmenter.h>
+
 #include <algorithm>
 #include <ranges>
 
@@ -1639,9 +1642,22 @@ text::ShapeResult TextRenderer::shapeTextRun(unicode::run_segmenter::range const
     auto const codepoints = u32string_view(totalCodepoints.data() + run.start, count);
     auto const clusters = gsl::span(totalClusters.data() + run.start, count);
     auto const script = get<unicode::Script>(run.properties);
-    auto const presentationStyle = get<unicode::PresentationStyle>(run.properties);
+    auto const textFont = getFontForStyle(_fonts, style);
+    // A bare emoji-presentation codepoint (no VS16, ZWJ, flag, keycap or modifier sequence) that the text
+    // font itself draws is drawn by it, as other terminals do: the font the user picked wins over the
+    // color emoji font. Sequences that ask for emoji explicitly stay emoji.
+    auto const isBareEmojiDrawnByTextFont =
+        get<unicode::PresentationStyle>(run.properties) == unicode::PresentationStyle::Emoji
+        && std::ranges::all_of(codepoints,
+                               [&](char32_t cp) {
+                                   return unicode::codepoint_properties::get(cp).emoji_segmentation_category
+                                              == unicode::EmojiSegmentationCategory::EmojiEmojiPresentation
+                                          && _textShaper->hasGlyph(textFont, cp);
+                               });
+    auto const presentationStyle = isBareEmojiDrawnByTextFont ? unicode::PresentationStyle::Text
+                                                              : get<unicode::PresentationStyle>(run.properties);
     auto const isEmojiPresentation = presentationStyle == unicode::PresentationStyle::Emoji;
-    auto const font = isEmojiPresentation ? _fonts.emoji : getFontForStyle(_fonts, style);
+    auto const font = isEmojiPresentation ? _fonts.emoji : textFont;
 
     text::ShapeResult glyphPosition;
     glyphPosition.reserve(clusters.size());
