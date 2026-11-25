@@ -262,6 +262,7 @@ struct RenderCursor
     float animationProgress = 1.0f;              ///< 0.0 = at animateFrom, 1.0 = at position.
     RGBColor cursorColor {};                     ///< Resolved cursor color at target position.
     std::optional<RGBColor> animateFromColor {}; ///< Cursor color at animation source position.
+    bool trail = false;                          ///< Draw a fading trail from animateFrom (cursor_trail).
     /// The display the cursor is on. A status line's cursor does not scroll with the page, nor is it clipped
     /// to it.
     RenderedDisplay display = RenderedDisplay::Main;

@@ -1561,8 +1561,10 @@ void Terminal::updateCursorMotionAnimation(RenderBuffer& output)
         output.cursor->animateFrom = toScreen(_cursorMotion.fromPosition);
         output.cursor->animationProgress = _cursorMotion.progress(now);
         output.cursor->animateFromColor = _cursorMotion.fromColor;
+        output.cursor->trail = _settings.cursorTrail;
     }
-    else if (gridCursorPos != _cursorMotion.toPosition && _settings.cursorMotionAnimationDuration.count() > 0)
+    else if (gridCursorPos != _cursorMotion.toPosition
+             && cursorMoveAnimates(_cursorMotion.toPosition, gridCursorPos))
     {
         // Start new animation (store grid positions)
         _cursorMotion.active = true;
@@ -1576,6 +1578,7 @@ void Terminal::updateCursorMotionAnimation(RenderBuffer& output)
         output.cursor->animateFrom = toScreen(_cursorMotion.fromPosition);
         output.cursor->animationProgress = _cursorMotion.progress(now);
         output.cursor->animateFromColor = _cursorMotion.fromColor;
+        output.cursor->trail = _settings.cursorTrail;
     }
     else
     {

@@ -1167,6 +1167,8 @@ vtbackend::Settings sessionSettings(Config const& config,
     settings.screenTransitionStyle = profile.screenTransitionStyle.value();
     settings.screenTransitionDuration = profile.screenTransitionDuration.value();
     settings.cursorMotionAnimationDuration = profile.cursorMotionAnimationDuration.value();
+    settings.cursorTrail = profile.cursorTrail.value();
+    settings.cursorMotionThreshold = std::max(0, profile.cursorMotionThreshold.value());
     settings.smoothLineScrolling = profile.smoothLineScrolling.value();
     settings.smoothScrolling = profile.smoothScrolling.value();
     settings.momentumScrolling = profile.momentumScrolling.value();
@@ -2226,6 +2228,8 @@ void YAMLConfigReader::loadProfileBody(YAML::Node const& child,
         loadFromEntry(child, "screen_transition", where.screenTransitionStyle);
         loadFromEntry(child, "screen_transition_duration", where.screenTransitionDuration);
         loadFromEntry(child, "cursor_motion_animation_duration", where.cursorMotionAnimationDuration);
+        loadFromEntry(child, "cursor_trail", where.cursorTrail);
+        loadFromEntry(child, "cursor_motion_threshold", where.cursorMotionThreshold);
         // Maps that are no config entries of their own, each guarded on its own: a value of the wrong
         // shape costs that key, not the whole profile.
         loadGuarded(child, "cursor", where.modeInsert.value().cursor);

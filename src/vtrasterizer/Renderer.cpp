@@ -19,6 +19,7 @@
 #endif
 
 #include <algorithm>
+#include <cmath>
 #include <array>
 #include <cassert>
 #include <format>
@@ -956,17 +957,47 @@ bool Renderer::renderImpl(vtbackend::Terminal& terminal, bool pressure)
         {
             auto const fromPixel = _gridMetrics.map(*cursor.animateFrom, cursorPixelOffset);
             auto const toPixel = _gridMetrics.map(cursor.position, cursorPixelOffset);
-            auto const animationProgress = cursor.animationProgress;
-            auto const interpolated = crispy::Point {
-                .x = fromPixel.x
-                     + static_cast<int>(animationProgress * static_cast<float>(toPixel.x - fromPixel.x)),
-                .y = fromPixel.y
-                     + static_cast<int>(animationProgress * static_cast<float>(toPixel.y - fromPixel.y)),
+            // A trail's head races ahead (ease-out) and its tail lags (ease-in), so the smear stretches
+            // out and then collapses onto the target -- kitty's cursor_trail look.
+            auto const progress = cursor.animationProgress;
+            auto const headProgress =
+                cursor.trail ? 1.0f - ((1.0f - progress) * (1.0f - progress) * (1.0f - progress)) : progress;
+            auto const animationProgress = headProgress;
+            auto const lerpPoint = [&](float t) {
+                return crispy::Point {
+                    .x = fromPixel.x + static_cast<int>(t * static_cast<float>(toPixel.x - fromPixel.x)),
+                    .y = fromPixel.y + static_cast<int>(t * static_cast<float>(toPixel.y - fromPixel.y)),
+                };
             };
+            auto const interpolated = lerpPoint(headProgress);
             auto const color =
                 cursor.animateFromColor
                     ? vtbackend::mixColor(*cursor.animateFromColor, cursor.cursorColor, animationProgress)
                     : cursor.cursorColor;
+            if (cursor.trail)
+            {
+                auto const tail = lerpPoint(progress * progress);
+                auto const dx = static_cast<float>(interpolated.x - tail.x);
+                auto const dy = static_cast<float>(interpolated.y - tail.y);
+                auto const cellWidth = _gridMetrics.cellSize.width.as<int>();
+                auto const cellHeight = _gridMetrics.cellSize.height.as<int>();
+                // One stamp per third of the smaller cell side keeps a diagonal smear solid.
+                auto const step = std::max(1.0f, static_cast<float>(std::min(cellWidth, cellHeight)) / 3.0f);
+                auto const stamps =
+                    std::clamp(static_cast<int>(std::hypot(dx, dy) / step), 1, 256);
+                for (auto i = 0; i < stamps; ++i)
+                {
+                    auto const t = static_cast<float>(i) / static_cast<float>(stamps);
+                    // Fainter toward the tail; overlapping stamps add up, so each one stays light.
+                    auto const alpha = static_cast<uint8_t>(10.0f + (t * 60.0f));
+                    _renderTarget->renderRectangle(tail.x + static_cast<int>(t * dx),
+                                                   tail.y + static_cast<int>(t * dy),
+                                                   _gridMetrics.cellSize.width * vtbackend::Width::cast_from(
+                                                                                     cursor.width),
+                                                   _gridMetrics.cellSize.height,
+                                                   vtbackend::RGBAColor(color, alpha));
+                }
+            }
             _cursorRenderer.setShape(cursor.shape);
             _cursorRenderer.render(interpolated, cursor.width, color);
         }

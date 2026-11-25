@@ -76,6 +76,8 @@ struct BlinkStyle {};
 struct ScreenTransitionStyle {};
 struct ScreenTransitionDuration {};
 struct CursorMotionAnimationDuration {};
+struct CursorTrail {};
+struct CursorMotionThreshold {};
 struct Colors {};
 struct ModalCursorScrollOff {};
 struct ModeInsert {};

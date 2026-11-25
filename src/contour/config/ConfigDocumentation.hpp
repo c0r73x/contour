@@ -4630,6 +4630,52 @@ struct Text<CursorMotionAnimationDuration>:
 {
 };
 
+constexpr StringLiteral CursorTrailConfig {
+    "{comment} Draws a fading trail behind the cursor while it moves (like kitty's cursor_trail).\n"
+    "{comment} Needs cursor_motion_animation_duration > 0.\n"
+    "cursor_trail: {}\n"
+    "\n"
+};
+
+constexpr StringLiteral CursorTrailWeb {
+    "Draws a fading trail behind the cursor while its motion animation runs.\n"
+    "\n"
+    "```yaml\n"
+    "profiles:\n"
+    "  profile_name:\n"
+    "    cursor_trail: true\n"
+    "```\n"
+    "\n"
+};
+
+template <>
+struct Text<CursorTrail>: DocumentationEntry<CursorTrailConfig, CursorTrailWeb>
+{
+};
+
+constexpr StringLiteral CursorMotionThresholdConfig {
+    "{comment} The fewest cells a cursor move must cover to animate; shorter moves (typing) jump.\n"
+    "cursor_motion_threshold: {}\n"
+    "\n"
+};
+
+constexpr StringLiteral CursorMotionThresholdWeb {
+    "The fewest cells (the larger of the line and column distance) a cursor move must cover to be\n"
+    "animated. Shorter moves, such as typing, jump at once.\n"
+    "\n"
+    "```yaml\n"
+    "profiles:\n"
+    "  profile_name:\n"
+    "    cursor_motion_threshold: 2\n"
+    "```\n"
+    "\n"
+};
+
+template <>
+struct Text<CursorMotionThreshold>: DocumentationEntry<CursorMotionThresholdConfig, CursorMotionThresholdWeb>
+{
+};
+
 template <>
 struct Text<Colors>: DocumentationEntry<ColorsConfig, ColorsWeb>
 {

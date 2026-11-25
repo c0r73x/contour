@@ -199,6 +199,10 @@ struct Settings
     ScreenTransitionStyle screenTransitionStyle = ScreenTransitionStyle::Fade;
     std::chrono::milliseconds screenTransitionDuration { 250 };
     std::chrono::milliseconds cursorMotionAnimationDuration { 80 };
+    /// Draws a fading trail behind a moving cursor (kitty's cursor_trail); needs a motion duration.
+    bool cursorTrail = false;
+    /// The fewest cells (Chebyshev distance) a cursor move must cover to animate; shorter moves jump.
+    int cursorMotionThreshold = 0;
     /// How the input method's preedit is drawn. Read where the render buffer is built, under the terminal's
     /// lock, which a configuration reload assigning it holds too.
     PreeditStyle preeditStyle = PreeditStyle::Highlighted;
