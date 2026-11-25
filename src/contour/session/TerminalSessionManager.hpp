@@ -351,6 +351,11 @@ class TerminalSessionManager: public QObject, public vtworkspace::ModelEvents
     /// which is the tested path, rather than through actions::Quit's bare exit().
     void closeAllTabs(TerminalSession* acting);
 
+    /// Closes every window through its own teardown (WindowController::closeWindow), as clicking each
+    /// one's close button would: with `daemon.detach_on_close` off that ends their sessions on the daemon
+    /// too, so quitting leaves no hidden workspace behind. The application ends with its last window.
+    void closeAllWindows();
+
     /// Looks up @p name in the app's configured layouts and appends its tabs to the window hosting
     /// @p acting (the LaunchLayout action). Logs and no-ops if the layout is unknown or @p acting has
     /// no hosting window.

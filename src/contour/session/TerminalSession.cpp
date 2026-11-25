@@ -6613,6 +6613,14 @@ bool TerminalSession::operator()(actions::PasteSelection paste)
 bool TerminalSession::operator()(actions::Quit)
 {
     // TODO: later warn here when more then one terminal view is open
+    // With `daemon.detach_on_close` off, quitting is closing every window: the bare exit below would only
+    // detach their sessions, leaving the daemon a hidden workspace per window that a later window shows
+    // when its own last shell exits.
+    if (!_app.config().daemon.value().detachOnClose && _manager != nullptr)
+    {
+        _manager->closeAllWindows();
+        return true;
+    }
     // Deliberately NOT locked: closing the device is precisely the mechanism that breaks the parser
     // thread out of its blocking read. Serializing it behind that thread's own lock is what we are
     // trying to avoid.
